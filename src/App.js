@@ -105,22 +105,25 @@ function ChatInterface() {
     ]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [showSuggestions, setShowSuggestions] = useState(true); // New state for suggestions
     const chatEndRef = useRef(null);
 
     useEffect(() => {
         chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
 
-    const handleSend = async () => {
-        if (!input.trim() || isLoading) return;
+    const handleSend = async (messageText = input) => {
+        if (!messageText.trim() || isLoading) return;
+        
+        setShowSuggestions(false); // Hide suggestions on send
 
-        const userMessage = { id: Date.now(), from: 'user', type: 'text', content: input };
+        const userMessage = { id: Date.now(), from: 'user', type: 'text', content: messageText };
         setMessages(prev => [...prev, userMessage]);
         setInput('');
         setIsLoading(true);
 
         try {
-            const botResponse = await getBotResponse(input);
+            const botResponse = await getBotResponse(messageText);
             setMessages(prev => [...prev, { id: Date.now() + 1, ...botResponse }]);
         } catch (error) {
             console.error("Detailed error from handleSend:", error);
@@ -135,6 +138,13 @@ function ChatInterface() {
             setIsLoading(false);
         }
     };
+    
+    // Wrapper for key press to use the correct message text
+    const handleKeyPress = (e) => {
+        if (e.key === 'Enter') {
+            handleSend(input);
+        }
+    };
 
     return (
         <>
@@ -143,22 +153,44 @@ function ChatInterface() {
                 {isLoading && <LoadingIndicator />}
                 <div ref={chatEndRef} />
             </div>
+            
+            {showSuggestions && <SuggestionChips onChipClick={handleSend} />}
+
             <div className="chat-footer">
                 <div className="input-container">
                     <input
                         type="text"
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+                        onKeyPress={handleKeyPress}
                         placeholder="Ask about Chicken Ghee Roast..."
                         disabled={isLoading}
                     />
-                    <button onClick={handleSend} disabled={isLoading}>
+                    <button onClick={() => handleSend(input)} disabled={isLoading}>
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                     </button>
                 </div>
             </div>
         </>
+    );
+}
+
+// *** NEW COMPONENT FOR SUGGESTION CHIPS ***
+function SuggestionChips({ onChipClick }) {
+    const suggestions = [
+        "What's Panambur Beach like?",
+        "Plan a food tour for me",
+        "Teach me some Tulu"
+    ];
+
+    return (
+        <div className="suggestion-chips-container">
+            {suggestions.map(suggestion => (
+                <button key={suggestion} className="suggestion-chip" onClick={() => onChipClick(suggestion)}>
+                    {suggestion}
+                </button>
+            ))}
+        </div>
     );
 }
 

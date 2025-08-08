@@ -108,7 +108,7 @@ body {
     display: flex;
     align-items: flex-end;
     gap: 0.5rem; /* 8px */
-    max-w: 80%;
+    max-width: 80%;
 }
 .user-message-wrapper {
     flex-direction: row-reverse;
@@ -227,7 +227,6 @@ body {
     color: #4b5563;
     margin: 0;
 }
-/* *** NEW BUTTON STYLE *** */
 .map-button {
     display: block;
     width: 100%;
@@ -242,6 +241,29 @@ body {
 }
 .map-button:hover {
     background-color: #1d4ed8;
+}
+
+/* *** NEW SUGGESTION CHIP STYLES *** */
+.suggestion-chips-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0 1rem 0.5rem 1rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+.suggestion-chip {
+    padding: 0.5rem 1rem;
+    background-color: #f3f4f6;
+    border: 1px solid #d1d5db;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    color: #374151;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+.suggestion-chip:hover {
+    background-color: #e5e7eb;
+    border-color: #9ca3af;
 }
 
 
