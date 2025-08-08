@@ -180,8 +180,6 @@ body {
 .tulu-text { font-weight: 600; color: #1f2937; margin: 0; }
 .tulu-translation { font-size: 0.875rem; color: #4b5563; margin: 0; }
 .tulu-translation span { font-style: italic; }
-
-/* *** NEW COPY BUTTON STYLES *** */
 .copy-button {
     background-color: #fb923c;
     color: white;
@@ -198,7 +196,6 @@ body {
 .copy-button.copied {
     background-color: #22c55e;
 }
-
 
 /* Food Tour Card Styles */
 .food-tour-card {
@@ -278,6 +275,47 @@ body {
 .suggestion-chip:hover {
     background-color: #e5e7eb;
     border-color: #9ca3af;
+}
+
+/* *** NEW EVENT LIST STYLES *** */
+.event-list-card {
+    background-color: white;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    border: 1px solid #e5e7eb;
+}
+.event-list-card h3 {
+    font-weight: bold;
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+    margin-top: 0;
+    text-align: center;
+    color: #1f2937;
+}
+.event-items-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+.event-item {
+    background-color: #f9fafb;
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    border-left: 4px solid #f97316;
+}
+.event-item h4 {
+    font-weight: 600;
+    margin: 0 0 0.25rem 0;
+}
+.event-item p {
+    font-size: 0.875rem;
+    color: #4b5563;
+    margin: 0;
+}
+.event-item .date {
+    font-size: 0.8rem;
+    color: #6b7281;
+    margin-top: 0.5rem;
 }
 
 
