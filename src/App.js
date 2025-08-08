@@ -1,25 +1,354 @@
-import logo from './logo.svg';
-import './App.css';
+import React, { useState, useEffect, useRef } from 'react';
+import { initializeApp } from 'firebase/app';
+import { getFirestore, collection, doc, setDoc, getDocs, query, where } from 'firebase/firestore';
+import './App.css'; // Import the new CSS file
 
+// --- 1. CONFIGURATION: Firebase and Gemini API ---
+// Keys are now securely loaded from the .env file
+const firebaseConfig = {
+  apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
+  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.REACT_APP_FIREBASE_APP_ID,
+  measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID
+};
+
+const GEMINI_API_KEY = process.env.REACT_APP_GEMINI_API_KEY;
+const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
+
+
+// --- 2. INITIALIZATION & DATABASE SETUP ---
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const setupInitialData = async () => {
+    console.log("Setting up initial data in Firestore...");
+    const data = {
+        places: [
+            { id: "panambur_beach", name: "Panambur Beach", category: "Beach", description: "One of Mangaluru's most popular beaches, known for its clean shores, beautiful sunsets, and various events.", best_time_to_visit: "Evenings (4 PM - 7 PM) are ideal. The best months are from September to February.", events: "Hosts the International Kite Festival (January) and other beach festivals.", image_url: "https://i.imgur.com/s6k1sYj.jpg" },
+            { id: "kadri_temple", name: "Kadri Manjunatha Temple", category: "Temple", description: "An ancient temple dedicated to Lord Shiva, known for its bronze statues and the ponds at the rear.", best_time_to_visit: "Early mornings or during evening prayers for a serene experience.", image_url: "https://i.imgur.com/rO1gSQA.jpg" }
+        ],
+        food: [
+            { id: "ghee_roast", name: "Chicken Ghee Roast", type: "Cuisine", description: "A fiery, tangy, and rich chicken dish cooked with roasted spices and a generous amount of clarified butter (ghee).", origin_story: "The iconic dish was invented at Shetty Lunch Home in Kundapura. It is a hallmark of Bunt cuisine.", image_url: "https://i.imgur.com/YJqM3iR.jpg" },
+            { id: "neer_dosa", name: "Neer Dosa", type: "Cuisine", description: "A thin, soft, and delicate rice crepe. The name literally translates to 'water dosa' in Tulu. It is typically served with chutney or chicken/fish curry.", origin_story: "A staple breakfast item from the Tulu Nadu region, cherished for its simplicity and taste.", image_url: "https://i.imgur.com/Xz3gU1l.jpg" }
+        ],
+        tulu: [
+            { id: "how_are_you", english: "How are you?", tulu: "Encha Ullar?", pronunciation: "En-chha Ool-lar" },
+            { id: "thank_you", english: "Thank you", tulu: "Solmel", pronunciation: "Sol-mel" },
+            { id: "whats_your_name", english: "What is your name?", tulu: "Eerena Pudar Enchina?", pronunciation: "Ee-ray-nah Poo-dahr En-chee-nah" },
+            { id: "welcome", english: "Welcome", tulu: "Mokeda Magaleg", pronunciation: "Mo-kay-dah Mah-gah-leg" }
+        ]
+    };
+
+    try {
+        for (const [collectionName, documents] of Object.entries(data)) {
+            for (const document of documents) {
+                await setDoc(doc(db, collectionName, document.id), document);
+            }
+        }
+        console.log("Initial data setup complete!");
+    } catch (error) {
+        console.error("Error setting up initial data: ", error);
+    }
+};
+
+// --- 3. THE MAIN APPLICATION COMPONENT ---
 function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+    const [isDataSetup, setIsDataSetup] = useState(false);
+
+    useEffect(() => {
+        const checkAndSetupData = async () => {
+            const placesCollection = collection(db, "places");
+            const snapshot = await getDocs(placesCollection);
+            if (snapshot.empty) {
+                await setupInitialData();
+            } else {
+                console.log("Data already exists. Skipping setup.");
+            }
+            setIsDataSetup(true);
+        };
+        checkAndSetupData();
+    }, []);
+
+    return (
+        <div className="app-container">
+            <div className="chat-window">
+                <header className="chat-header">
+                    <h1>Mangaluru Mitra 🗺️</h1>
+                    <p>Your Interactive Local Guide</p>
+                </header>
+                {isDataSetup ? <ChatInterface /> : <LoadingScreen />}
+            </div>
+        </div>
+    );
+}
+
+// --- 4. LOADING SCREEN COMPONENT ---
+function LoadingScreen() {
+    return (
+        <div className="loading-screen">
+            <svg className="spinner" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p>Setting up your local guide...</p>
+            <p className="loading-subtext">This will only take a moment on the first run.</p>
+        </div>
+    );
+}
+
+// --- 5. CHAT INTERFACE COMPONENT ---
+function ChatInterface() {
+    const [messages, setMessages] = useState([
+        { id: 1, from: 'bot', type: 'text', content: "Namaskara! I'm Mangaluru Mitra. Ask me about local food, famous places, or even some Tulu phrases!" }
+    ]);
+    const [input, setInput] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const chatEndRef = useRef(null);
+
+    useEffect(() => {
+        chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, [messages]);
+
+    const handleSend = async () => {
+        if (!input.trim() || isLoading) return;
+
+        const userMessage = { id: Date.now(), from: 'user', type: 'text', content: input };
+        setMessages(prev => [...prev, userMessage]);
+        setInput('');
+        setIsLoading(true);
+
+        try {
+            const botResponse = await getBotResponse(input);
+            setMessages(prev => [...prev, { id: Date.now() + 1, ...botResponse }]);
+        } catch (error) {
+            console.error("Detailed error from handleSend:", error);
+            const errorMessage = { 
+                id: Date.now() + 1, 
+                from: 'bot', 
+                type: 'text', 
+                content: `A critical error occurred: ${error.message}. Please check the browser's developer console for more details.` 
+            };
+            setMessages(prev => [...prev, errorMessage]);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <>
+            <div className="chat-body">
+                {messages.map(msg => <ChatMessage key={msg.id} message={msg} />)}
+                {isLoading && <LoadingIndicator />}
+                <div ref={chatEndRef} />
+            </div>
+            <div className="chat-footer">
+                <div className="input-container">
+                    <input
+                        type="text"
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+                        placeholder="Ask about Chicken Ghee Roast..."
+                        disabled={isLoading}
+                    />
+                    <button onClick={handleSend} disabled={isLoading}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                    </button>
+                </div>
+            </div>
+        </>
+    );
+}
+
+// --- 6. CHAT MESSAGE & LOADING INDICATOR COMPONENTS ---
+function ChatMessage({ message }) {
+    const isBot = message.from === 'bot';
+
+    const renderContent = () => {
+        switch (message.type) {
+            case 'card':
+                return (
+                    <div className="info-card">
+                        {message.image_url && <img src={message.image_url} alt={message.title} />}
+                        <div className="info-card-content">
+                            <h3>{message.title}</h3>
+                            <p>{message.content}</p>
+                            {message.origin_story && <p className="origin-story">"{message.origin_story}"</p>}
+                        </div>
+                    </div>
+                );
+            case 'tulu_list':
+                return (
+                    <div className="tulu-list-card">
+                         <h3>{message.title}</h3>
+                         <div className="tulu-phrases-container">
+                            {message.phrases.map(phrase => (
+                                <div key={phrase.id} className="tulu-phrase">
+                                    <p className="tulu-text">"{phrase.tulu}"</p>
+                                    <p className="tulu-translation">({phrase.english}) - <span>{phrase.pronunciation}</span></p>
+                                </div>
+                            ))}
+                         </div>
+                    </div>
+                );
+            case 'food_tour':
+                return (
+                    <div className="food-tour-card">
+                         <h3>{message.title}</h3>
+                         <div className="tour-stops-container">
+                            {message.stops.map(stop => (
+                                <div key={stop.meal} className="tour-stop">
+                                    <img src={stop.image_url} alt={stop.name} />
+                                    <div className="tour-stop-content">
+                                        <h4>{stop.meal}: {stop.name}</h4>
+                                        <p>{stop.description}</p>
+                                    </div>
+                                </div>
+                            ))}
+                         </div>
+                    </div>
+                );
+            default: // 'text'
+                return <p>{message.content}</p>;
+        }
+    };
+
+    return (
+        <div className={`message-wrapper ${isBot ? 'bot-message-wrapper' : 'user-message-wrapper'}`}>
+            <div className={`avatar ${isBot ? 'bot-avatar' : 'user-avatar'}`}>
+                {isBot ? 'M' : 'You'}
+            </div>
+            <div className={`message-bubble ${isBot ? 'bot-bubble' : 'user-bubble'}`}>
+                {renderContent()}
+            </div>
+        </div>
+    );
+}
+
+function LoadingIndicator() {
+    return (
+        <div className="message-wrapper bot-message-wrapper">
+            <div className="avatar bot-avatar">M</div>
+            <div className="message-bubble bot-bubble">
+                <div className="typing-indicator">
+                    <span>Mitra is typing</span>
+                    <div className="dot"></div>
+                    <div className="dot"></div>
+                    <div className="dot"></div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// --- 7. AI & DATABASE LOGIC (The Bot's Brain) ---
+async function getBotResponse(userInput) {
+    const prompt = `
+        You are "Mangaluru Mitra", a friendly and expert guide to Mangaluru city.
+        Your goal is to understand what the user is asking and classify their request into one of the following categories.
+        You must respond in JSON format only.
+
+        Categories:
+        1.  "GET_FOOD_INFO": User is asking for information about a specific local food.
+        2.  "GET_PLACE_INFO": User is asking for information about a specific local place.
+        3.  "GET_TULU_PHRASES": User is asking for Tulu language phrases.
+        4.  "CREATE_FOOD_TOUR": User wants a one-day food tour itinerary.
+        5.  "CHITCHAT": The user is making small talk or asking a question you don't have a specific category for.
+
+        User's question: "${userInput}"
+
+        Based on the user's question, determine the category and extract the key entity (the name of the food or place).
+
+        Example Responses:
+        - If the user asks "Tell me about Chicken Ghee Roast", you should respond: {"category": "GET_FOOD_INFO", "entity": "Chicken Ghee Roast"}
+        - If the user asks "What's Panambur beach like?", you should respond: {"category": "GET_PLACE_INFO", "entity": "Panambur Beach"}
+        - If the user asks "Teach me some Tulu", you should respond: {"category": "GET_TULU_PHRASES", "entity": "all"}
+        - If the user asks "Plan a food tour for me", you'd respond: {"category": "CREATE_FOOD_TOUR", "entity": "all"}
+        - If the user asks "Hello, how are you?", you should respond: {"category": "CHITCHAT", "entity": "greeting"}
+
+        Now, analyze the user's question and provide the JSON response.
+    `;
+
+    const geminiPayload = { contents: [{ parts: [{ text: prompt }] }] };
+    
+    const geminiResponse = await fetch(GEMINI_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(geminiPayload)
+    });
+
+    if (!geminiResponse.ok) {
+        const errorBody = await geminiResponse.json().catch(() => ({ error: { message: "Could not parse error response." }}));
+        console.error("API Error Body:", errorBody);
+        throw new Error(`API call failed with status ${geminiResponse.status}: ${errorBody.error.message}`);
+    }
+
+    const geminiResult = await geminiResponse.json();
+    
+    if (!geminiResult.candidates || geminiResult.candidates.length === 0) {
+        console.error("Invalid response from Gemini API:", geminiResult);
+        throw new Error("Received an invalid or empty response from the AI service.");
+    }
+    
+    const rawText = geminiResult.candidates[0].content.parts[0].text;
+    
+    const jsonText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+    const intent = JSON.parse(jsonText);
+
+    switch (intent.category) {
+        case 'GET_FOOD_INFO':
+        case 'GET_PLACE_INFO':
+            const collectionName = intent.category === 'GET_FOOD_INFO' ? 'food' : 'places';
+            const q = query(collection(db, collectionName), where("name", "==", intent.entity));
+            const querySnapshot = await getDocs(q);
+            if (!querySnapshot.empty) {
+                const docData = querySnapshot.docs[0].data();
+                return {
+                    from: 'bot',
+                    type: 'card',
+                    title: docData.name,
+                    content: docData.description,
+                    origin_story: docData.origin_story || docData.best_time_to_visit,
+                    image_url: docData.image_url
+                };
+            } else {
+                return { from: 'bot', type: 'text', content: `I'm sorry, I don't have information about "${intent.entity}" right now. I'm still learning!` };
+            }
+
+        case 'GET_TULU_PHRASES':
+            const tuluSnapshot = await getDocs(collection(db, "tulu"));
+            const phrases = tuluSnapshot.docs.map(doc => doc.data());
+            return {
+                from: 'bot',
+                type: 'tulu_list',
+                title: "Here are a few useful Tulu phrases:",
+                phrases: phrases
+            };
+        
+        case 'CREATE_FOOD_TOUR':
+            return {
+                from: 'bot',
+                type: 'food_tour',
+                title: "Your One-Day Mangaluru Food Tour!",
+                stops: [
+                    { meal: "Breakfast", name: "Neer Dosa", description: "Start with this soft, delicate rice crepe.", image_url: "https://i.imgur.com/Xz3gU1l.jpg" },
+                    { meal: "Lunch", name: "Chicken Ghee Roast", description: "Experience the iconic fiery and tangy dish.", image_url: "https://i.imgur.com/YJqM3iR.jpg" },
+                    { meal: "Evening Snack", name: "Golibaje", description: "Try these sweet and savory Mangalore Buns.", image_url: "https://i.imgur.com/g8eSgJ5.jpg" },
+                    { meal: "Dinner", name: "Fish Curry", description: "Finish with a classic coastal fish curry.", image_url: "https://i.imgur.com/Bf4gV2d.jpg" }
+                ]
+            };
+
+        case 'CHITCHAT':
+        default:
+            return {
+                from: 'bot',
+                type: 'text',
+                content: "I'm doing great, thank you for asking! My purpose is to tell you all about the wonderful city of Mangaluru. What would you like to know?"
+            };
+    }
 }
 
 export default App;
