@@ -65,6 +65,13 @@ const setupInitialData = async () => {
 // --- 3. THE MAIN APPLICATION COMPONENT ---
 function App() {
     const [isDataSetup, setIsDataSetup] = useState(false);
+    const [theme, setTheme] = useState('light'); // New state for theme
+
+    // Effect to apply the theme class to the body
+    useEffect(() => {
+        document.body.className = '';
+        document.body.classList.add(`${theme}-theme`);
+    }, [theme]);
 
     useEffect(() => {
         const checkAndSetupData = async () => {
@@ -80,10 +87,14 @@ function App() {
         checkAndSetupData();
     }, []);
 
+    const toggleTheme = () => {
+        setTheme(prevTheme => prevTheme === 'light' ? 'dark' : 'light');
+    };
+
     return (
         <div className="app-container">
             <div className="chat-window">
-                {isDataSetup ? <ChatInterface /> : <LoadingScreen />}
+                {isDataSetup ? <ChatInterface theme={theme} toggleTheme={toggleTheme} /> : <LoadingScreen />}
             </div>
         </div>
     );
@@ -106,7 +117,7 @@ function LoadingScreen() {
 // --- 5. CHAT INTERFACE COMPONENT ---
 const initialMessage = { id: 1, from: 'bot', type: 'text', content: "Namaskara! I'm Mangaluru Mitra. Ask me about local food, famous places, or even some Tulu phrases!" };
 
-function ChatInterface() {
+function ChatInterface({ theme, toggleTheme }) {
     const [messages, setMessages] = useState([initialMessage]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -158,11 +169,14 @@ function ChatInterface() {
     return (
         <>
             <header className="chat-header">
-                <div>
+                <div className="header-title">
                     <h1>Mangaluru Mitra 🗺️</h1>
                     <p>Your Interactive Local Guide</p>
                 </div>
-                <button onClick={handleClearChat} className="clear-chat-button">Clear</button>
+                <div className="header-controls">
+                    <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
+                    <button onClick={handleClearChat} className="clear-chat-button">Clear</button>
+                </div>
             </header>
             <div className="chat-body">
                 {messages.map(msg => <ChatMessage key={msg.id} message={msg} />)}
@@ -205,6 +219,19 @@ function SuggestionChips({ onChipClick }) {
                     {suggestion}
                 </button>
             ))}
+        </div>
+    );
+}
+
+// *** NEW THEME TOGGLE COMPONENT ***
+function ThemeToggle({ theme, toggleTheme }) {
+    return (
+        <div className="theme-toggle">
+            <span className="theme-toggle-label">Dark Mode</span>
+            <label className="toggle-switch">
+                <input type="checkbox" onChange={toggleTheme} checked={theme === 'dark'} />
+                <span className="slider"></span>
+            </label>
         </div>
     );
 }
