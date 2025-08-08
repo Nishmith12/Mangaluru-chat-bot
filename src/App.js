@@ -264,16 +264,15 @@ function ChatMessage({ message }) {
     );
 }
 
+// *** UPDATED LOADING INDICATOR WITH SKELETON ***
 function LoadingIndicator() {
     return (
         <div className="message-wrapper bot-message-wrapper">
-            <div className="avatar bot-avatar">M</div>
+            <div className="avatar bot-avatar skeleton"></div>
             <div className="message-bubble bot-bubble">
-                <div className="typing-indicator">
-                    <span>Mitra is typing</span>
-                    <div className="dot"></div>
-                    <div className="dot"></div>
-                    <div className="dot"></div>
+                <div className="loading-skeleton">
+                    <div className="skeleton skeleton-line"></div>
+                    <div className="skeleton skeleton-line"></div>
                 </div>
             </div>
         </div>
