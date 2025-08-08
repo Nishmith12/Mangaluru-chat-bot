@@ -168,6 +168,10 @@ body {
 }
 
 /* Message Styling */
+.message-container {
+    display: flex;
+    flex-direction: column;
+}
 .message-wrapper {
     display: flex;
     align-items: flex-end;
@@ -212,6 +216,21 @@ body {
     border-bottom-right-radius: 0;
 }
 .message-bubble p { margin: 0; }
+
+/* *** NEW TIMESTAMP STYLES *** */
+.timestamp {
+    font-size: 0.75rem;
+    color: var(--text-subtle);
+    margin-top: 0.25rem;
+}
+.bot-timestamp {
+    margin-left: 3rem; /* Aligns with the start of the bot message */
+}
+.user-timestamp {
+    text-align: right;
+    margin-right: 3rem; /* Aligns with the end of the user message */
+}
+
 
 /* Card Styles */
 .info-card {
@@ -415,6 +434,7 @@ body {
     text-transform: capitalize;
 }
 
+
 /* Loading Screen & Indicators */
 .loading-screen {
     flex: 1;
@@ -462,7 +482,7 @@ body {
     margin-bottom: 0;
 }
 
-/* --- NEW THEME TOGGLE STYLES --- */
+/* Theme Toggle Styles */
 .theme-toggle {
     display: flex;
     align-items: center;

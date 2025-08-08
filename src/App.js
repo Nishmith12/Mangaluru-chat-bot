@@ -115,7 +115,7 @@ function LoadingScreen() {
 }
 
 // --- 5. CHAT INTERFACE COMPONENT ---
-const initialMessage = { id: 1, from: 'bot', type: 'text', content: "Namaskara! I'm Mangaluru Mitra. Ask me about local food, famous places, or even some Tulu phrases!" };
+const initialMessage = { id: 1, from: 'bot', type: 'text', content: "Namaskara! I'm Mangaluru Mitra. Ask me about local food, famous places, or even some Tulu phrases!", timestamp: new Date() };
 
 function ChatInterface({ theme, toggleTheme }) {
     const [messages, setMessages] = useState([initialMessage]);
@@ -133,21 +133,22 @@ function ChatInterface({ theme, toggleTheme }) {
         
         setShowSuggestions(false);
 
-        const userMessage = { id: Date.now(), from: 'user', type: 'text', content: messageText };
+        const userMessage = { id: Date.now(), from: 'user', type: 'text', content: messageText, timestamp: new Date() };
         setMessages(prev => [...prev, userMessage]);
         setInput('');
         setIsLoading(true);
 
         try {
             const botResponse = await getBotResponse(messageText);
-            setMessages(prev => [...prev, { id: Date.now() + 1, ...botResponse }]);
+            setMessages(prev => [...prev, { id: Date.now() + 1, ...botResponse, timestamp: new Date() }]);
         } catch (error) {
             console.error("Detailed error from handleSend:", error);
             const errorMessage = { 
                 id: Date.now() + 1, 
                 from: 'bot', 
                 type: 'text', 
-                content: `A critical error occurred: ${error.message}. Please check the browser's developer console for more details.` 
+                content: `A critical error occurred: ${error.message}. Please check the browser's developer console for more details.`,
+                timestamp: new Date()
             };
             setMessages(prev => [...prev, errorMessage]);
         } finally {
@@ -223,7 +224,6 @@ function SuggestionChips({ onChipClick }) {
     );
 }
 
-// *** NEW THEME TOGGLE COMPONENT ***
 function ThemeToggle({ theme, toggleTheme }) {
     return (
         <div className="theme-toggle">
@@ -237,6 +237,12 @@ function ThemeToggle({ theme, toggleTheme }) {
 }
 
 // --- 6. CHAT MESSAGE & LOADING INDICATOR COMPONENTS ---
+// *** NEW TIMESTAMP FORMATTING FUNCTION ***
+const formatTimestamp = (date) => {
+    if (!date) return '';
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+};
+
 function ChatMessage({ message }) {
     const isBot = message.from === 'bot';
     const [copiedPhrase, setCopiedPhrase] = useState(null);
@@ -331,13 +337,18 @@ function ChatMessage({ message }) {
     };
 
     return (
-        <div className={`message-wrapper ${isBot ? 'bot-message-wrapper' : 'user-message-wrapper'}`}>
-            <div className={`avatar ${isBot ? 'bot-avatar' : 'user-avatar'}`}>
-                {isBot ? 'M' : 'You'}
+        <div className={`message-container`}>
+            <div className={`message-wrapper ${isBot ? 'bot-message-wrapper' : 'user-message-wrapper'}`}>
+                <div className={`avatar ${isBot ? 'bot-avatar' : 'user-avatar'}`}>
+                    {isBot ? 'M' : 'You'}
+                </div>
+                <div className={`message-bubble ${isBot ? 'bot-bubble' : 'user-bubble'}`}>
+                    {renderContent()}
+                </div>
             </div>
-            <div className={`message-bubble ${isBot ? 'bot-bubble' : 'user-bubble'}`}>
-                {renderContent()}
-            </div>
+            <span className={`timestamp ${isBot ? 'bot-timestamp' : 'user-timestamp'}`}>
+                {formatTimestamp(message.timestamp)}
+            </span>
         </div>
     );
 }
