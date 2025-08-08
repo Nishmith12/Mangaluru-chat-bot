@@ -217,7 +217,6 @@ body {
 }
 .message-bubble p { margin: 0; }
 
-/* *** NEW TIMESTAMP STYLES *** */
 .timestamp {
     font-size: 0.75rem;
     color: var(--text-subtle);
@@ -531,6 +530,33 @@ input:checked + .slider {
 }
 input:checked + .slider:before {
     transform: translateX(20px);
+}
+
+/* *** NEW AUTHENTICATION STYLES *** */
+.auth-button {
+    background-color: white;
+    color: var(--accent-orange);
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.auth-button:hover {
+    background-color: #f3f4f6;
+}
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.user-avatar {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    border: 2px solid white;
 }
 
 

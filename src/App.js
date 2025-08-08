@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, doc, setDoc, getDocs, query, where } from 'firebase/firestore';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 import './App.css';
 
 // --- 1. CONFIGURATION: Firebase and Gemini API ---
@@ -22,6 +23,7 @@ const WEATHER_API_KEY = process.env.REACT_APP_OPENWEATHER_API_KEY;
 // --- 2. INITIALIZATION & DATABASE SETUP ---
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app); // Initialize Firebase Auth
 
 // A function to add our initial Mangaluru data to the database.
 const setupInitialData = async () => {
@@ -65,7 +67,16 @@ const setupInitialData = async () => {
 // --- 3. THE MAIN APPLICATION COMPONENT ---
 function App() {
     const [isDataSetup, setIsDataSetup] = useState(false);
-    const [theme, setTheme] = useState('light'); // New state for theme
+    const [theme, setTheme] = useState('light');
+    const [user, setUser] = useState(null); // State for the logged-in user
+
+    // Effect to listen for auth state changes
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+            setUser(currentUser);
+        });
+        return () => unsubscribe(); // Cleanup subscription on unmount
+    }, []);
 
     // Effect to apply the theme class to the body
     useEffect(() => {
@@ -94,7 +105,7 @@ function App() {
     return (
         <div className="app-container">
             <div className="chat-window">
-                {isDataSetup ? <ChatInterface theme={theme} toggleTheme={toggleTheme} /> : <LoadingScreen />}
+                {isDataSetup ? <ChatInterface theme={theme} toggleTheme={toggleTheme} user={user} /> : <LoadingScreen />}
             </div>
         </div>
     );
@@ -117,7 +128,7 @@ function LoadingScreen() {
 // --- 5. CHAT INTERFACE COMPONENT ---
 const initialMessage = { id: 1, from: 'bot', type: 'text', content: "Namaskara! I'm Mangaluru Mitra. Ask me about local food, famous places, or even some Tulu phrases!", timestamp: new Date() };
 
-function ChatInterface({ theme, toggleTheme }) {
+function ChatInterface({ theme, toggleTheme, user }) {
     const [messages, setMessages] = useState([initialMessage]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -175,6 +186,7 @@ function ChatInterface({ theme, toggleTheme }) {
                     <p>Your Interactive Local Guide</p>
                 </div>
                 <div className="header-controls">
+                    <AuthDisplay user={user} />
                     <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
                     <button onClick={handleClearChat} className="clear-chat-button">Clear</button>
                 </div>
@@ -227,7 +239,6 @@ function SuggestionChips({ onChipClick }) {
 function ThemeToggle({ theme, toggleTheme }) {
     return (
         <div className="theme-toggle">
-            <span className="theme-toggle-label">Dark Mode</span>
             <label className="toggle-switch">
                 <input type="checkbox" onChange={toggleTheme} checked={theme === 'dark'} />
                 <span className="slider"></span>
@@ -236,8 +247,29 @@ function ThemeToggle({ theme, toggleTheme }) {
     );
 }
 
+// *** NEW AUTHENTICATION COMPONENT ***
+const signInWithGoogle = () => {
+    const provider = new GoogleAuthProvider();
+    signInWithPopup(auth, provider).catch(error => console.error(error));
+};
+
+const signOutUser = () => {
+    signOut(auth).catch(error => console.error(error));
+};
+
+function AuthDisplay({ user }) {
+    if (user) {
+        return (
+            <div className="user-info">
+                <img src={user.photoURL} alt={user.displayName} className="user-avatar" />
+                <button onClick={signOutUser} className="auth-button">Logout</button>
+            </div>
+        );
+    }
+    return <button onClick={signInWithGoogle} className="auth-button">Login</button>;
+}
+
 // --- 6. CHAT MESSAGE & LOADING INDICATOR COMPONENTS ---
-// *** NEW TIMESTAMP FORMATTING FUNCTION ***
 const formatTimestamp = (date) => {
     if (!date) return '';
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -416,15 +448,6 @@ async function getBotResponse(userInput) {
         User's question: "${userInput}"
 
         Analyze the user's question and provide the JSON response.
-
-        Example Responses:
-        - User: "Tell me about Chicken Ghee Roast" -> {"category": "GET_FOOD_INFO", "entity": "Chicken Ghee Roast"}
-        - User: "What's Panambur beach like?" -> {"category": "GET_PLACE_INFO", "entity": "Panambur Beach"}
-        - User: "Teach me some Tulu" -> {"category": "GET_TULU_PHRASES", "entity": "all"}
-        - User: "Plan a food tour for me" -> {"category": "CREATE_FOOD_TOUR", "entity": "all"}
-        - User: "What events are happening?" -> {"category": "GET_EVENTS", "entity": "all"}
-        - User: "hi" -> {"category": "CHITCHAT", "entity": "greeting"}
-        - User: "Tell me about Tannirbhavi Beach" -> {"category": "UNKNOWN_QUERY", "entity": "Tannirbhavi Beach"}
     `;
 
     const geminiPayload = { contents: [{ parts: [{ text: prompt }] }] };
