@@ -32,7 +32,7 @@ const setupInitialData = async () => {
             { id: "st_aloysius_chapel", name: "St. Aloysius Chapel", category: "Historical Site", description: "Famous for its magnificent interior paintings that cover nearly all of the walls and ceilings, created by the Italian Jesuit Antonio Moscheni in 1900. It is often compared to the Sistine Chapel in Rome.", best_time_to_visit: "Open on weekdays from 9:30 AM to 1:00 PM and 2:00 PM to 4:30 PM. The art is best viewed in daylight." }
         ],
         food: [
-            { id: "ghee_roast", name: "Chicken Ghee Roast", type: "Lunch/Dinner", description: "A fiery, tangy, and rich chicken dish cooked with roasted spices and a generous amount of clarified butter (ghee).", origin_story: "The iconic dish was invented at Shetty Lunch Home in Kundapura. It is a hallmark of Bunt cuisine.", restaurant_name: "Maharaja Restaurant", lat: 12.8739, lng: 74.8425 },
+            { id: "ghee_roast", name: "Chicken Ghee Roast", type: "Lunch/Dinner", description: "A fiery, tangy, and rich chicken dish cooked with roasted spices and a generous amount of clarified butter ( ghee).", origin_story: "The iconic dish was invented at Shetty Lunch Home in Kundapura. It is a hallmark of Bunt cuisine.", restaurant_name: "Maharaja Restaurant", lat: 12.8739, lng: 74.8425 },
             { id: "neer_dosa", name: "Neer Dosa", type: "Breakfast", description: "A thin, soft, and delicate rice crepe. The name literally translates to 'water dosa' in Tulu. It is typically served with chutney or chicken/fish curry.", origin_story: "A staple breakfast item from the Tulu Nadu region, cherished for its simplicity and taste.", restaurant_name: "Hotel Ayodhya", lat: 12.8705, lng: 74.8398 },
             { id: "golibaje", name: "Golibaje (Mangalore Buns)", type: "Snack", description: "A popular tea-time snack in Mangaluru, these are soft, fluffy, slightly sweet and savory fritters made from a fermented all-purpose flour batter.", origin_story: "A classic snack found in Udupi-Mangaluru region restaurants, perfect with a cup of filter coffee.", restaurant_name: "Taj Mahal Cafe", lat: 12.8679, lng: 74.8416 },
             { id: "ideal_ice_cream", name: "Ideal Ice Cream", type: "Dessert", description: "A legendary ice cream brand from Mangaluru, famous for its unique flavors like 'Gadbad' and 'Pabba's Special'.", origin_story: "Started by Mr. Prabhakar Kamath in 1975, Ideal's has become an iconic part of Mangalorean culture and a must-visit for anyone in the city.", restaurant_name: "Pabba's Ideal Cafe", lat: 12.8829, lng: 74.8415 }
@@ -201,6 +201,23 @@ function SuggestionChips({ onChipClick }) {
 // --- 6. CHAT MESSAGE & LOADING INDICATOR COMPONENTS ---
 function ChatMessage({ message }) {
     const isBot = message.from === 'bot';
+    const [copiedPhrase, setCopiedPhrase] = useState(null); // State to track copied phrase
+
+    // Function to handle copying text to clipboard
+    const handleCopy = (text, id) => {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            setCopiedPhrase(id);
+            setTimeout(() => setCopiedPhrase(null), 2000); // Reset after 2 seconds
+        } catch (err) {
+            console.error('Failed to copy text: ', err);
+        }
+        document.body.removeChild(textArea);
+    };
 
     const renderContent = () => {
         switch (message.type) {
@@ -221,8 +238,16 @@ function ChatMessage({ message }) {
                          <div className="tulu-phrases-container">
                             {message.phrases.map(phrase => (
                                 <div key={phrase.id} className="tulu-phrase">
-                                    <p className="tulu-text">"{phrase.tulu}"</p>
-                                    <p className="tulu-translation">({phrase.english}) - <span>{phrase.pronunciation}</span></p>
+                                    <div>
+                                        <p className="tulu-text">"{phrase.tulu}"</p>
+                                        <p className="tulu-translation">({phrase.english}) - <span>{phrase.pronunciation}</span></p>
+                                    </div>
+                                    <button 
+                                        className={`copy-button ${copiedPhrase === phrase.id ? 'copied' : ''}`}
+                                        onClick={() => handleCopy(phrase.tulu, phrase.id)}
+                                    >
+                                        {copiedPhrase === phrase.id ? 'Copied!' : 'Copy'}
+                                    </button>
                                 </div>
                             ))}
                          </div>
@@ -331,7 +356,8 @@ async function getBotResponse(userInput) {
     
     const rawText = geminiResult.candidates[0].content.parts[0].text;
     
-    const jsonText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+    // *** CORRECTED REGULAR EXPRESSION ***
+    const jsonText = rawText.replace(/```json/g, "").replace(/```/g, "").trim();
     const intent = JSON.parse(jsonText);
 
     switch (intent.category) {
