@@ -27,16 +27,15 @@ const setupInitialData = async () => {
     console.log("Setting up initial data in Firestore...");
     const data = {
         places: [
-            // *** REMOVED IMAGE URL ***
             { id: "panambur_beach", name: "Panambur Beach", category: "Beach", description: "One of Mangaluru's most popular beaches, known for its clean shores, beautiful sunsets, and various events.", best_time_to_visit: "Evenings (4 PM - 7 PM) are ideal. The best months are from September to February.", events: "Hosts the International Kite Festival (January) and other beach festivals." },
-            // *** REMOVED IMAGE URL ***
-            { id: "kadri_temple", name: "Kadri Manjunatha Temple", category: "Temple", description: "An ancient temple dedicated to Lord Shiva, known for its bronze statues and the ponds at the rear.", best_time_to_visit: "Early mornings or during evening prayers for a serene experience." }
+            { id: "kadri_temple", name: "Kadri Manjunatha Temple", category: "Temple", description: "An ancient temple dedicated to Lord Shiva, known for its bronze statues and the ponds at the rear.", best_time_to_visit: "Early mornings or during evening prayers for a serene experience." },
+            { id: "st_aloysius_chapel", name: "St. Aloysius Chapel", category: "Historical Site", description: "Famous for its magnificent interior paintings that cover nearly all of the walls and ceilings, created by the Italian Jesuit Antonio Moscheni in 1900. It is often compared to the Sistine Chapel in Rome.", best_time_to_visit: "Open on weekdays from 9:30 AM to 1:00 PM and 2:00 PM to 4:30 PM. The art is best viewed in daylight." }
         ],
         food: [
-            // *** REMOVED IMAGE URL ***
-            { id: "ghee_roast", name: "Chicken Ghee Roast", type: "Cuisine", description: "A fiery, tangy, and rich chicken dish cooked with roasted spices and a generous amount of clarified butter (ghee).", origin_story: "The iconic dish was invented at Shetty Lunch Home in Kundapura. It is a hallmark of Bunt cuisine.", restaurant_name: "Maharaja Restaurant", lat: 12.8739, lng: 74.8425 },
-            // *** REMOVED IMAGE URL ***
-            { id: "neer_dosa", name: "Neer Dosa", type: "Cuisine", description: "A thin, soft, and delicate rice crepe. The name literally translates to 'water dosa' in Tulu. It is typically served with chutney or chicken/fish curry.", origin_story: "A staple breakfast item from the Tulu Nadu region, cherished for its simplicity and taste.", restaurant_name: "Hotel Ayodhya", lat: 12.8705, lng: 74.8398 }
+            { id: "ghee_roast", name: "Chicken Ghee Roast", type: "Lunch/Dinner", description: "A fiery, tangy, and rich chicken dish cooked with roasted spices and a generous amount of clarified butter (ghee).", origin_story: "The iconic dish was invented at Shetty Lunch Home in Kundapura. It is a hallmark of Bunt cuisine.", restaurant_name: "Maharaja Restaurant", lat: 12.8739, lng: 74.8425 },
+            { id: "neer_dosa", name: "Neer Dosa", type: "Breakfast", description: "A thin, soft, and delicate rice crepe. The name literally translates to 'water dosa' in Tulu. It is typically served with chutney or chicken/fish curry.", origin_story: "A staple breakfast item from the Tulu Nadu region, cherished for its simplicity and taste.", restaurant_name: "Hotel Ayodhya", lat: 12.8705, lng: 74.8398 },
+            { id: "golibaje", name: "Golibaje (Mangalore Buns)", type: "Snack", description: "A popular tea-time snack in Mangaluru, these are soft, fluffy, slightly sweet and savory fritters made from a fermented all-purpose flour batter.", origin_story: "A classic snack found in Udupi-Mangaluru region restaurants, perfect with a cup of filter coffee.", restaurant_name: "Taj Mahal Cafe", lat: 12.8679, lng: 74.8416 },
+            { id: "ideal_ice_cream", name: "Ideal Ice Cream", type: "Dessert", description: "A legendary ice cream brand from Mangaluru, famous for its unique flavors like 'Gadbad' and 'Pabba's Special'.", origin_story: "Started by Mr. Prabhakar Kamath in 1975, Ideal's has become an iconic part of Mangalorean culture and a must-visit for anyone in the city.", restaurant_name: "Pabba's Ideal Cafe", lat: 12.8829, lng: 74.8415 }
         ],
         tulu: [
             { id: "how_are_you", english: "How are you?", tulu: "Encha Ullar?", pronunciation: "En-chha Ool-lar" },
@@ -364,6 +363,7 @@ async function getBotResponse(userInput) {
                 phrases: phrases
             };
         
+        // *** DYNAMIC FOOD TOUR LOGIC ***
         case 'CREATE_FOOD_TOUR':
             const foodSnapshot = await getDocs(collection(db, "food"));
             const allFood = foodSnapshot.docs.map(doc => doc.data());
@@ -382,9 +382,9 @@ async function getBotResponse(userInput) {
             return {
                 from: 'bot',
                 type: 'food_tour',
-                title: "Your One-Day Mangaluru Food Tour!",
+                title: "Your Dynamic Mangaluru Food Tour!",
                 stops: tourStops.map(stop => ({
-                    meal: stop.name === "Neer Dosa" ? "Breakfast" : "Lunch", // Simple logic for now
+                    meal: stop.type, // Use the 'type' field from the database
                     name: stop.name,
                     restaurant_name: stop.restaurant_name,
                 })),
