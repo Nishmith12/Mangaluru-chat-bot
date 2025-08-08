@@ -83,10 +83,6 @@ function App() {
     return (
         <div className="app-container">
             <div className="chat-window">
-                <header className="chat-header">
-                    <h1>Mangaluru Mitra 🗺️</h1>
-                    <p>Your Interactive Local Guide</p>
-                </header>
                 {isDataSetup ? <ChatInterface /> : <LoadingScreen />}
             </div>
         </div>
@@ -108,10 +104,10 @@ function LoadingScreen() {
 }
 
 // --- 5. CHAT INTERFACE COMPONENT ---
+const initialMessage = { id: 1, from: 'bot', type: 'text', content: "Namaskara! I'm Mangaluru Mitra. Ask me about local food, famous places, or even some Tulu phrases!" };
+
 function ChatInterface() {
-    const [messages, setMessages] = useState([
-        { id: 1, from: 'bot', type: 'text', content: "Namaskara! I'm Mangaluru Mitra. Ask me about local food, famous places, or even some Tulu phrases!" }
-    ]);
+    const [messages, setMessages] = useState([initialMessage]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [showSuggestions, setShowSuggestions] = useState(true);
@@ -154,8 +150,20 @@ function ChatInterface() {
         }
     };
 
+    const handleClearChat = () => {
+        setMessages([initialMessage]);
+        setShowSuggestions(true);
+    };
+
     return (
         <>
+            <header className="chat-header">
+                <div>
+                    <h1>Mangaluru Mitra 🗺️</h1>
+                    <p>Your Interactive Local Guide</p>
+                </div>
+                <button onClick={handleClearChat} className="clear-chat-button">Clear</button>
+            </header>
             <div className="chat-body">
                 {messages.map(msg => <ChatMessage key={msg.id} message={msg} />)}
                 {isLoading && <LoadingIndicator />}
@@ -353,7 +361,6 @@ async function fetchWeather(lat, lon) {
 }
 
 async function getBotResponse(userInput) {
-    // *** IMPROVED AI PROMPT ***
     const prompt = `
         You are "Mangaluru Mitra", a friendly and expert guide to Mangaluru city.
         Your goal is to understand what the user is asking and classify their request into one of the following categories.

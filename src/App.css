@@ -40,6 +40,9 @@ body {
     border-top-right-radius: 1rem;
     box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
     text-align: center;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 .chat-header h1 {
     font-size: 1.5rem; /* 24px */
@@ -50,6 +53,23 @@ body {
     font-size: 0.875rem; /* 14px */
     margin: 0;
 }
+
+/* *** NEW CLEAR CHAT BUTTON STYLE *** */
+.clear-chat-button {
+    background-color: rgba(255, 255, 255, 0.2);
+    border: 1px solid white;
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.clear-chat-button:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+}
+
 
 /* Chat Body - where messages appear */
 .chat-body {
@@ -316,35 +336,6 @@ body {
     font-size: 0.8rem;
     color: #6b7281;
     margin-top: 0.5rem;
-}
-
-/* *** NEW WEATHER STYLES *** */
-.weather-info {
-    border-top: 1px solid #e5e7eb;
-    padding: 0.75rem 1rem;
-    background-color: #f9fafb;
-}
-.weather-title {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: #6b7281;
-    text-transform: uppercase;
-    margin: 0 0 0.25rem 0;
-}
-.weather-details {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-.weather-temp {
-    font-size: 1.5rem;
-    font-weight: bold;
-    color: #1f2937;
-}
-.weather-desc {
-    font-size: 0.875rem;
-    color: #4b5563;
-    text-transform: capitalize;
 }
 
 
