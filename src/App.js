@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, doc, setDoc, getDocs, query, where } from 'firebase/firestore';
-import './App.css'; // Import the new CSS file
+import './App.css';
 
 // --- 1. CONFIGURATION: Firebase and Gemini API ---
 const firebaseConfig = {
@@ -22,16 +22,21 @@ const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+// A function to add our initial Mangaluru data to the database.
 const setupInitialData = async () => {
     console.log("Setting up initial data in Firestore...");
     const data = {
         places: [
-            { id: "panambur_beach", name: "Panambur Beach", category: "Beach", description: "One of Mangaluru's most popular beaches, known for its clean shores, beautiful sunsets, and various events.", best_time_to_visit: "Evenings (4 PM - 7 PM) are ideal. The best months are from September to February.", events: "Hosts the International Kite Festival (January) and other beach festivals.", image_url: "https://i.imgur.com/s6k1sYj.jpg" },
-            { id: "kadri_temple", name: "Kadri Manjunatha Temple", category: "Temple", description: "An ancient temple dedicated to Lord Shiva, known for its bronze statues and the ponds at the rear.", best_time_to_visit: "Early mornings or during evening prayers for a serene experience.", image_url: "https://i.imgur.com/rO1gSQA.jpg" }
+            // *** REMOVED IMAGE URL ***
+            { id: "panambur_beach", name: "Panambur Beach", category: "Beach", description: "One of Mangaluru's most popular beaches, known for its clean shores, beautiful sunsets, and various events.", best_time_to_visit: "Evenings (4 PM - 7 PM) are ideal. The best months are from September to February.", events: "Hosts the International Kite Festival (January) and other beach festivals." },
+            // *** REMOVED IMAGE URL ***
+            { id: "kadri_temple", name: "Kadri Manjunatha Temple", category: "Temple", description: "An ancient temple dedicated to Lord Shiva, known for its bronze statues and the ponds at the rear.", best_time_to_visit: "Early mornings or during evening prayers for a serene experience." }
         ],
         food: [
-            { id: "ghee_roast", name: "Chicken Ghee Roast", type: "Cuisine", description: "A fiery, tangy, and rich chicken dish cooked with roasted spices and a generous amount of clarified butter (ghee).", origin_story: "The iconic dish was invented at Shetty Lunch Home in Kundapura. It is a hallmark of Bunt cuisine.", image_url: "https://i.imgur.com/YJqM3iR.jpg", restaurant_name: "Maharaja Restaurant", lat: 12.8739, lng: 74.8425 },
-            { id: "neer_dosa", name: "Neer Dosa", type: "Cuisine", description: "A thin, soft, and delicate rice crepe. The name literally translates to 'water dosa' in Tulu. It is typically served with chutney or chicken/fish curry.", origin_story: "A staple breakfast item from the Tulu Nadu region, cherished for its simplicity and taste.", image_url: "https://i.imgur.com/Xz3gU1l.jpg", restaurant_name: "Hotel Ayodhya", lat: 12.8705, lng: 74.8398 }
+            // *** REMOVED IMAGE URL ***
+            { id: "ghee_roast", name: "Chicken Ghee Roast", type: "Cuisine", description: "A fiery, tangy, and rich chicken dish cooked with roasted spices and a generous amount of clarified butter (ghee).", origin_story: "The iconic dish was invented at Shetty Lunch Home in Kundapura. It is a hallmark of Bunt cuisine.", restaurant_name: "Maharaja Restaurant", lat: 12.8739, lng: 74.8425 },
+            // *** REMOVED IMAGE URL ***
+            { id: "neer_dosa", name: "Neer Dosa", type: "Cuisine", description: "A thin, soft, and delicate rice crepe. The name literally translates to 'water dosa' in Tulu. It is typically served with chutney or chicken/fish curry.", origin_story: "A staple breakfast item from the Tulu Nadu region, cherished for its simplicity and taste.", restaurant_name: "Hotel Ayodhya", lat: 12.8705, lng: 74.8398 }
         ],
         tulu: [
             { id: "how_are_you", english: "How are you?", tulu: "Encha Ullar?", pronunciation: "En-chha Ool-lar" },
@@ -203,7 +208,6 @@ function ChatMessage({ message }) {
             case 'card':
                 return (
                     <div className="info-card">
-                        {message.image_url && <img src={message.image_url} alt={message.title} />}
                         <div className="info-card-content">
                             <h3>{message.title}</h3>
                             <p>{message.content}</p>
@@ -232,7 +236,6 @@ function ChatMessage({ message }) {
                          <div className="tour-stops-container">
                             {message.stops.map(stop => (
                                 <div key={stop.meal} className="tour-stop">
-                                    <img src={stop.image_url} alt={stop.name} />
                                     <div className="tour-stop-content">
                                         <h4>{stop.meal}: {stop.name}</h4>
                                         <p>at {stop.restaurant_name}</p>
@@ -346,7 +349,6 @@ async function getBotResponse(userInput) {
                     title: docData.name,
                     content: docData.description,
                     origin_story: docData.origin_story || docData.best_time_to_visit,
-                    image_url: docData.image_url
                 };
             } else {
                 return { from: 'bot', type: 'text', content: `I'm sorry, I don't have information about "${intent.entity}" right now. I'm still learning!` };
@@ -385,7 +387,6 @@ async function getBotResponse(userInput) {
                     meal: stop.name === "Neer Dosa" ? "Breakfast" : "Lunch", // Simple logic for now
                     name: stop.name,
                     restaurant_name: stop.restaurant_name,
-                    image_url: stop.image_url
                 })),
                 mapUrl: mapUrl
             };
