@@ -108,7 +108,7 @@ body {
     display: flex;
     align-items: flex-end;
     gap: 0.5rem; /* 8px */
-    max-width: 80%;
+    max-w: 80%;
 }
 .user-message-wrapper {
     flex-direction: row-reverse;
@@ -179,7 +179,7 @@ body {
 .tulu-translation { font-size: 0.875rem; color: #4b5563; margin: 0; }
 .tulu-translation span { font-style: italic; }
 
-/* *** NEW STYLES FOR FOOD TOUR *** */
+/* Food Tour Card Styles */
 .food-tour-card {
     background-color: white;
     padding: 1rem;
@@ -198,6 +198,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 1rem;
+    margin-bottom: 1rem;
 }
 .tour-stop {
     display: flex;
@@ -225,6 +226,22 @@ body {
     font-size: 0.875rem;
     color: #4b5563;
     margin: 0;
+}
+/* *** NEW BUTTON STYLE *** */
+.map-button {
+    display: block;
+    width: 100%;
+    padding: 0.75rem;
+    background-color: #2563eb;
+    color: white;
+    text-align: center;
+    text-decoration: none;
+    font-weight: 600;
+    border-radius: 0.5rem;
+    transition: background-color 0.2s;
+}
+.map-button:hover {
+    background-color: #1d4ed8;
 }
 
 

@@ -4,7 +4,6 @@ import { getFirestore, collection, doc, setDoc, getDocs, query, where } from 'fi
 import './App.css'; // Import the new CSS file
 
 // --- 1. CONFIGURATION: Firebase and Gemini API ---
-// Keys are now securely loaded from the .env file
 const firebaseConfig = {
   apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
   authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
@@ -31,8 +30,8 @@ const setupInitialData = async () => {
             { id: "kadri_temple", name: "Kadri Manjunatha Temple", category: "Temple", description: "An ancient temple dedicated to Lord Shiva, known for its bronze statues and the ponds at the rear.", best_time_to_visit: "Early mornings or during evening prayers for a serene experience.", image_url: "https://i.imgur.com/rO1gSQA.jpg" }
         ],
         food: [
-            { id: "ghee_roast", name: "Chicken Ghee Roast", type: "Cuisine", description: "A fiery, tangy, and rich chicken dish cooked with roasted spices and a generous amount of clarified butter (ghee).", origin_story: "The iconic dish was invented at Shetty Lunch Home in Kundapura. It is a hallmark of Bunt cuisine.", image_url: "https://i.imgur.com/YJqM3iR.jpg" },
-            { id: "neer_dosa", name: "Neer Dosa", type: "Cuisine", description: "A thin, soft, and delicate rice crepe. The name literally translates to 'water dosa' in Tulu. It is typically served with chutney or chicken/fish curry.", origin_story: "A staple breakfast item from the Tulu Nadu region, cherished for its simplicity and taste.", image_url: "https://i.imgur.com/Xz3gU1l.jpg" }
+            { id: "ghee_roast", name: "Chicken Ghee Roast", type: "Cuisine", description: "A fiery, tangy, and rich chicken dish cooked with roasted spices and a generous amount of clarified butter (ghee).", origin_story: "The iconic dish was invented at Shetty Lunch Home in Kundapura. It is a hallmark of Bunt cuisine.", image_url: "https://i.imgur.com/YJqM3iR.jpg", restaurant_name: "Maharaja Restaurant", lat: 12.8739, lng: 74.8425 },
+            { id: "neer_dosa", name: "Neer Dosa", type: "Cuisine", description: "A thin, soft, and delicate rice crepe. The name literally translates to 'water dosa' in Tulu. It is typically served with chutney or chicken/fish curry.", origin_story: "A staple breakfast item from the Tulu Nadu region, cherished for its simplicity and taste.", image_url: "https://i.imgur.com/Xz3gU1l.jpg", restaurant_name: "Hotel Ayodhya", lat: 12.8705, lng: 74.8398 }
         ],
         tulu: [
             { id: "how_are_you", english: "How are you?", tulu: "Encha Ullar?", pronunciation: "En-chha Ool-lar" },
@@ -204,11 +203,14 @@ function ChatMessage({ message }) {
                                     <img src={stop.image_url} alt={stop.name} />
                                     <div className="tour-stop-content">
                                         <h4>{stop.meal}: {stop.name}</h4>
-                                        <p>{stop.description}</p>
+                                        <p>at {stop.restaurant_name}</p>
                                     </div>
                                 </div>
                             ))}
                          </div>
+                         <a href={message.mapUrl} target="_blank" rel="noopener noreferrer" className="map-button">
+                            View Tour on Map
+                         </a>
                     </div>
                 );
             default: // 'text'
@@ -329,16 +331,31 @@ async function getBotResponse(userInput) {
             };
         
         case 'CREATE_FOOD_TOUR':
+            const foodSnapshot = await getDocs(collection(db, "food"));
+            const allFood = foodSnapshot.docs.map(doc => doc.data());
+            
+            const tourStops = allFood.filter(item => item.lat && item.lng);
+
+            if (tourStops.length < 2) {
+                return { from: 'bot', type: 'text', content: "I don't have enough location data to create a tour yet!" };
+            }
+
+            // Build the Google Maps URL
+            const baseUrl = "https://www.google.com/maps/dir/";
+            const waypoints = tourStops.map(stop => `${stop.lat},${stop.lng}`).join('/');
+            const mapUrl = baseUrl + waypoints;
+
             return {
                 from: 'bot',
                 type: 'food_tour',
                 title: "Your One-Day Mangaluru Food Tour!",
-                stops: [
-                    { meal: "Breakfast", name: "Neer Dosa", description: "Start with this soft, delicate rice crepe.", image_url: "https://i.imgur.com/Xz3gU1l.jpg" },
-                    { meal: "Lunch", name: "Chicken Ghee Roast", description: "Experience the iconic fiery and tangy dish.", image_url: "https://i.imgur.com/YJqM3iR.jpg" },
-                    { meal: "Evening Snack", name: "Golibaje", description: "Try these sweet and savory Mangalore Buns.", image_url: "https://i.imgur.com/g8eSgJ5.jpg" },
-                    { meal: "Dinner", name: "Fish Curry", description: "Finish with a classic coastal fish curry.", image_url: "https://i.imgur.com/Bf4gV2d.jpg" }
-                ]
+                stops: tourStops.map(stop => ({
+                    meal: stop.name === "Neer Dosa" ? "Breakfast" : "Lunch", // Simple logic for now
+                    name: stop.name,
+                    restaurant_name: stop.restaurant_name,
+                    image_url: stop.image_url
+                })),
+                mapUrl: mapUrl
             };
 
         case 'CHITCHAT':
