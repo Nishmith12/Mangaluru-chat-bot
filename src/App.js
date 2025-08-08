@@ -182,7 +182,7 @@ function ChatInterface() {
 // *** NEW COMPONENT FOR SUGGESTION CHIPS ***
 function SuggestionChips({ onChipClick }) {
     const suggestions = [
-        "What's Panambur Beach like?",
+        "Tell me about Ideal Ice Cream",
         "Plan a food tour for me",
         "Teach me some Tulu"
     ];
@@ -281,6 +281,7 @@ function LoadingIndicator() {
 
 // --- 7. AI & DATABASE LOGIC (The Bot's Brain) ---
 async function getBotResponse(userInput) {
+    // *** ENHANCED AI PROMPT ***
     const prompt = `
         You are "Mangaluru Mitra", a friendly and expert guide to Mangaluru city.
         Your goal is to understand what the user is asking and classify their request into one of the following categories.
@@ -291,20 +292,20 @@ async function getBotResponse(userInput) {
         2.  "GET_PLACE_INFO": User is asking for information about a specific local place.
         3.  "GET_TULU_PHRASES": User is asking for Tulu language phrases.
         4.  "CREATE_FOOD_TOUR": User wants a one-day food tour itinerary.
-        5.  "CHITCHAT": The user is making small talk or asking a question you don't have a specific category for.
+        5.  "CHITCHAT": The user is making small talk (e.g., "hello", "how are you?", "what's your name?").
+        6.  "UNKNOWN_QUERY": The user is asking about a specific Mangalorean topic that you don't have data for (e.g., "Tannirbhavi Beach", "Pilikula Nisargadhama").
 
         User's question: "${userInput}"
 
-        Based on the user's question, determine the category and extract the key entity (the name of the food or place).
+        Analyze the user's question and provide the JSON response.
 
         Example Responses:
-        - If the user asks "Tell me about Chicken Ghee Roast", you should respond: {"category": "GET_FOOD_INFO", "entity": "Chicken Ghee Roast"}
-        - If the user asks "What's Panambur beach like?", you should respond: {"category": "GET_PLACE_INFO", "entity": "Panambur Beach"}
-        - If the user asks "Teach me some Tulu", you should respond: {"category": "GET_TULU_PHRASES", "entity": "all"}
-        - If the user asks "Plan a food tour for me", you'd respond: {"category": "CREATE_FOOD_TOUR", "entity": "all"}
-        - If the user asks "Hello, how are you?", you should respond: {"category": "CHITCHAT", "entity": "greeting"}
-
-        Now, analyze the user's question and provide the JSON response.
+        - User: "Tell me about Chicken Ghee Roast" -> {"category": "GET_FOOD_INFO", "entity": "Chicken Ghee Roast"}
+        - User: "What's Panambur beach like?" -> {"category": "GET_PLACE_INFO", "entity": "Panambur Beach"}
+        - User: "Teach me some Tulu" -> {"category": "GET_TULU_PHRASES", "entity": "all"}
+        - User: "Plan a food tour for me" -> {"category": "CREATE_FOOD_TOUR", "entity": "all"}
+        - User: "Hello, how are you?" -> {"category": "CHITCHAT", "entity": "greeting"}
+        - User: "Tell me about Tannirbhavi Beach" -> {"category": "UNKNOWN_QUERY", "entity": "Tannirbhavi Beach"}
     `;
 
     const geminiPayload = { contents: [{ parts: [{ text: prompt }] }] };
@@ -349,7 +350,8 @@ async function getBotResponse(userInput) {
                     origin_story: docData.origin_story || docData.best_time_to_visit,
                 };
             } else {
-                return { from: 'bot', type: 'text', content: `I'm sorry, I don't have information about "${intent.entity}" right now. I'm still learning!` };
+                 // This case will now be handled by UNKNOWN_QUERY, but it's a good fallback.
+                return { from: 'bot', type: 'text', content: `I'm sorry, I don't have specific information about "${intent.entity}" in my database right now. I'm always learning though!` };
             }
 
         case 'GET_TULU_PHRASES':
@@ -362,7 +364,6 @@ async function getBotResponse(userInput) {
                 phrases: phrases
             };
         
-        // *** DYNAMIC FOOD TOUR LOGIC ***
         case 'CREATE_FOOD_TOUR':
             const foodSnapshot = await getDocs(collection(db, "food"));
             const allFood = foodSnapshot.docs.map(doc => doc.data());
@@ -389,13 +390,28 @@ async function getBotResponse(userInput) {
                 })),
                 mapUrl: mapUrl
             };
-
-        case 'CHITCHAT':
-        default:
+        
+        // *** NEW CASE FOR UNKNOWN QUERIES ***
+        case 'UNKNOWN_QUERY':
             return {
                 from: 'bot',
                 type: 'text',
-                content: "I'm doing great, thank you for asking! My purpose is to tell you all about the wonderful city of Mangaluru. What would you like to know?"
+                content: `That's a great question about ${intent.entity}! I don't have specific details in my database about that yet, but I'm always learning. You could try asking me about Panambur Beach or Ideal Ice Cream!`
+            };
+
+        // *** ENHANCED CHITCHAT RESPONSES ***
+        case 'CHITCHAT':
+        default:
+            const responses = [
+                "I'm doing great, thank you! Ready to explore Mangaluru?",
+                "Namaskara! I'm here to help you discover the best of Mangaluru. What's on your mind?",
+                "I'm a bot, so I'm always doing well! What can I tell you about the beautiful city of Mangaluru?"
+            ];
+            const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+            return {
+                from: 'bot',
+                type: 'text',
+                content: randomResponse
             };
     }
 }
