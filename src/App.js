@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, doc, setDoc, getDocs, query, where } from 'firebase/firestore';
+import { getFirestore, collection, doc, setDoc, getDocs, query, where, addDoc } from 'firebase/firestore';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 import './App.css';
 
@@ -68,17 +68,15 @@ const setupInitialData = async () => {
 function App() {
     const [isDataSetup, setIsDataSetup] = useState(false);
     const [theme, setTheme] = useState('light');
-    const [user, setUser] = useState(null); // State for the logged-in user
+    const [user, setUser] = useState(null);
 
-    // Effect to listen for auth state changes
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
             setUser(currentUser);
         });
-        return () => unsubscribe(); // Cleanup subscription on unmount
+        return () => unsubscribe();
     }, []);
 
-    // Effect to apply the theme class to the body
     useEffect(() => {
         document.body.className = '';
         document.body.classList.add(`${theme}-theme`);
@@ -150,7 +148,7 @@ function ChatInterface({ theme, toggleTheme, user }) {
         setIsLoading(true);
 
         try {
-            const botResponse = await getBotResponse(messageText);
+            const botResponse = await getBotResponse(messageText, user);
             setMessages(prev => [...prev, { id: Date.now() + 1, ...botResponse, timestamp: new Date() }]);
         } catch (error) {
             console.error("Detailed error from handleSend:", error);
@@ -192,12 +190,12 @@ function ChatInterface({ theme, toggleTheme, user }) {
                 </div>
             </header>
             <div className="chat-body">
-                {messages.map(msg => <ChatMessage key={msg.id} message={msg} />)}
+                {messages.map(msg => <ChatMessage key={msg.id} message={msg} user={user} />)}
                 {isLoading && <LoadingIndicator />}
                 <div ref={chatEndRef} />
             </div>
             
-            {showSuggestions && <SuggestionChips onChipClick={handleSend} />}
+            {showSuggestions && <SuggestionChips onChipClick={handleSend} user={user} />}
 
             <div className="chat-footer">
                 <div className="input-container">
@@ -218,12 +216,14 @@ function ChatInterface({ theme, toggleTheme, user }) {
     );
 }
 
-function SuggestionChips({ onChipClick }) {
+function SuggestionChips({ onChipClick, user }) {
     const suggestions = [
         "Upcoming Events",
         "Plan a food tour for me",
-        "Teach me some Tulu"
     ];
+    if (user) {
+        suggestions.push("Show my favorites");
+    }
 
     return (
         <div className="suggestion-chips-container">
@@ -247,7 +247,6 @@ function ThemeToggle({ theme, toggleTheme }) {
     );
 }
 
-// *** NEW AUTHENTICATION COMPONENT ***
 const signInWithGoogle = () => {
     const provider = new GoogleAuthProvider();
     signInWithPopup(auth, provider).catch(error => console.error(error));
@@ -275,9 +274,10 @@ const formatTimestamp = (date) => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 
-function ChatMessage({ message }) {
+function ChatMessage({ message, user }) {
     const isBot = message.from === 'bot';
     const [copiedPhrase, setCopiedPhrase] = useState(null);
+    const [isFavorited, setIsFavorited] = useState(false);
 
     const handleCopy = (text, id) => {
         const textArea = document.createElement("textarea");
@@ -294,6 +294,21 @@ function ChatMessage({ message }) {
         document.body.removeChild(textArea);
     };
 
+    const handleFavorite = async (item) => {
+        if (!user) return;
+        try {
+            const favoritesCol = collection(db, `users/${user.uid}/favorites`);
+            await addDoc(favoritesCol, {
+                name: item.title,
+                type: item.weather ? 'place' : 'food', // Simple check to differentiate
+                ...item
+            });
+            setIsFavorited(true);
+        } catch (error) {
+            console.error("Error adding favorite: ", error);
+        }
+    };
+
     const renderContent = () => {
         switch (message.type) {
             case 'card':
@@ -305,6 +320,17 @@ function ChatMessage({ message }) {
                             {message.origin_story && <p className="origin-story">"{message.origin_story}"</p>}
                         </div>
                         {message.weather && <WeatherInfo weather={message.weather} />}
+                        {user && (
+                            <div className="card-actions">
+                                <button 
+                                    onClick={() => handleFavorite(message)} 
+                                    className={`favorite-button ${isFavorited ? 'favorited' : ''}`}
+                                    disabled={isFavorited}
+                                >
+                                    {isFavorited ? 'Saved!' : 'Save to Favorites'}
+                                </button>
+                            </div>
+                        )}
                     </div>
                 );
             case 'tulu_list':
@@ -361,6 +387,24 @@ function ChatMessage({ message }) {
                                 </div>
                             ))}
                         </div>
+                    </div>
+                );
+            case 'favorite_list':
+                 return (
+                    <div className="favorite-list-card">
+                        <h3>{message.title}</h3>
+                        {message.favorites.length === 0 ? (
+                            <p>You haven't saved any favorites yet!</p>
+                        ) : (
+                            <div className="favorite-items-container">
+                                {message.favorites.map(fav => (
+                                    <div key={fav.id} className="favorite-item">
+                                        <h4>{fav.name}</h4>
+                                        <p>{fav.content}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 );
             default: // 'text'
@@ -430,7 +474,7 @@ async function fetchWeather(lat, lon) {
     }
 }
 
-async function getBotResponse(userInput) {
+async function getBotResponse(userInput, user) {
     const prompt = `
         You are "Mangaluru Mitra", a friendly and expert guide to Mangaluru city.
         Your goal is to understand what the user is asking and classify their request into one of the following categories.
@@ -442,8 +486,9 @@ async function getBotResponse(userInput) {
         3.  "GET_TULU_PHRASES": User is asking for Tulu language phrases.
         4.  "CREATE_FOOD_TOUR": User wants a one-day food tour, an itinerary, or a plan.
         5.  "GET_EVENTS": User is asking about events, festivals, or things happening in the city.
-        6.  "CHITCHAT": The user is making small talk (e.g., "hello", "how are you?", "what's your name?", "hi").
-        7.  "UNKNOWN_QUERY": The user is asking about a specific Mangalorean topic that you don't have data for.
+        6.  "GET_FAVORITES": User is asking to see their saved or favorite items.
+        7.  "CHITCHAT": The user is making small talk (e.g., "hello", "how are you?", "what's your name?", "hi").
+        8.  "UNKNOWN_QUERY": The user is asking about a specific Mangalorean topic that you don't have data for.
 
         User's question: "${userInput}"
 
@@ -546,6 +591,20 @@ async function getBotResponse(userInput) {
                 type: 'event_list',
                 title: "Upcoming Events in Mangaluru",
                 events: events
+            };
+        
+        case 'GET_FAVORITES':
+            if (!user) {
+                return { from: 'bot', type: 'text', content: "You need to be logged in to see your favorites!" };
+            }
+            const favoritesCol = collection(db, `users/${user.uid}/favorites`);
+            const favoritesSnapshot = await getDocs(favoritesCol);
+            const favorites = favoritesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            return {
+                from: 'bot',
+                type: 'favorite_list',
+                title: "Your Saved Favorites",
+                favorites: favorites
             };
 
         case 'UNKNOWN_QUERY':

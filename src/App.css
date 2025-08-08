@@ -532,7 +532,7 @@ input:checked + .slider:before {
     transform: translateX(20px);
 }
 
-/* *** NEW AUTHENTICATION STYLES *** */
+/* Authentication Styles */
 .auth-button {
     background-color: white;
     color: var(--accent-orange);
@@ -557,6 +557,66 @@ input:checked + .slider:before {
     height: 2rem;
     border-radius: 50%;
     border: 2px solid white;
+}
+
+/* *** NEW FAVORITES STYLES *** */
+.card-actions {
+    padding: 0.5rem 1rem;
+    border-top: 1px solid var(--border-color);
+    background-color: var(--card-secondary-bg);
+}
+.favorite-button {
+    background-color: var(--user-bubble-bg);
+    color: white;
+    border: none;
+    width: 100%;
+    padding: 0.5rem;
+    border-radius: 0.375rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.favorite-button:hover {
+    opacity: 0.9;
+}
+.favorite-button.favorited {
+    background-color: #22c55e;
+    cursor: not-allowed;
+}
+.favorite-list-card {
+    background-color: var(--card-bg);
+    padding: 1rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--border-color);
+}
+.favorite-list-card h3 {
+    font-weight: bold;
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+    margin-top: 0;
+    text-align: center;
+    color: var(--text-primary);
+}
+.favorite-items-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+.favorite-item {
+    background-color: var(--card-secondary-bg);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    border-left: 4px solid var(--user-bubble-bg);
+}
+.favorite-item h4 {
+    font-weight: 600;
+    margin: 0 0 0.25rem 0;
+    color: var(--text-primary);
+}
+.favorite-item p {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin: 0;
 }
 
 
