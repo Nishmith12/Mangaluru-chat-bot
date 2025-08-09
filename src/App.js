@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, doc, setDoc, getDocs, query, where, addDoc, deleteDoc } from 'firebase/firestore';
+import { getFirestore, collection, doc, setDoc, getDocs, query, where, addDoc, deleteDoc, onSnapshot, orderBy, serverTimestamp } from 'firebase/firestore';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 import './App.css';
 
@@ -137,29 +137,77 @@ function ChatInterface({ theme, toggleTheme, user }) {
         chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
 
+    // *** NEW EFFECT FOR REAL-TIME CHAT HISTORY ***
+    useEffect(() => {
+        if (user) {
+            const messagesCol = collection(db, `users/${user.uid}/messages`);
+            const q = query(messagesCol, orderBy("timestamp", "asc"));
+
+            const unsubscribe = onSnapshot(q, (snapshot) => {
+                const history = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data(),
+                    timestamp: doc.data().timestamp ? doc.data().timestamp.toDate() : new Date()
+                }));
+                if (history.length > 0) {
+                    setMessages(history);
+                } else {
+                    // If history is empty for a new user, add the initial message to their history
+                    const welcomeMessage = { ...initialMessage, timestamp: serverTimestamp() };
+                    addDoc(messagesCol, welcomeMessage);
+                }
+            });
+
+            return () => unsubscribe(); // Cleanup listener on logout or unmount
+        } else {
+            // Reset for logged-out users
+            setMessages([initialMessage]);
+        }
+    }, [user]);
+
     const handleSend = async (messageText = input) => {
         if (!messageText.trim() || isLoading) return;
         
         setShowSuggestions(false);
+        setInput(''); // Clear input immediately
 
-        const userMessage = { id: Date.now(), from: 'user', type: 'text', content: messageText, timestamp: new Date() };
-        setMessages(prev => [...prev, userMessage]);
-        setInput('');
+        const userMessage = { from: 'user', type: 'text', content: messageText, timestamp: serverTimestamp() };
+        
+        // If user is logged in, save their message to Firestore
+        if (user) {
+            const messagesCol = collection(db, `users/${user.uid}/messages`);
+            await addDoc(messagesCol, userMessage);
+        } else {
+            // If not logged in, just update local state (won't be saved)
+            setMessages(prev => [...prev, { ...userMessage, timestamp: new Date(), id: Date.now() }]);
+        }
+
         setIsLoading(true);
 
         try {
-            const botResponse = await getBotResponse(messageText, user);
-            setMessages(prev => [...prev, { id: Date.now() + 1, ...botResponse, timestamp: new Date() }]);
+            const botResponseData = await getBotResponse(messageText, user);
+            const botMessage = { ...botResponseData, timestamp: serverTimestamp() };
+
+            if (user) {
+                const messagesCol = collection(db, `users/${user.uid}/messages`);
+                await addDoc(messagesCol, botMessage);
+            } else {
+                setMessages(prev => [...prev, { ...botMessage, timestamp: new Date(), id: Date.now() + 1 }]);
+            }
         } catch (error) {
             console.error("Detailed error from handleSend:", error);
             const errorMessage = { 
-                id: Date.now() + 1, 
                 from: 'bot', 
                 type: 'text', 
-                content: `A critical error occurred: ${error.message}. Please check the browser's developer console for more details.`,
-                timestamp: new Date()
+                content: `A critical error occurred: ${error.message}.`,
+                timestamp: serverTimestamp()
             };
-            setMessages(prev => [...prev, errorMessage]);
+             if (user) {
+                const messagesCol = collection(db, `users/${user.uid}/messages`);
+                await addDoc(messagesCol, errorMessage);
+            } else {
+                setMessages(prev => [...prev, { ...errorMessage, timestamp: new Date(), id: Date.now() + 1 }]);
+            }
         } finally {
             setIsLoading(false);
         }
@@ -171,7 +219,14 @@ function ChatInterface({ theme, toggleTheme, user }) {
         }
     };
 
-    const handleClearChat = () => {
+    const handleClearChat = async () => {
+        if (user) {
+            // For logged-in users, clear their history in Firestore
+            const messagesCol = collection(db, `users/${user.uid}/messages`);
+            const snapshot = await getDocs(messagesCol);
+            snapshot.forEach(doc => deleteDoc(doc.ref));
+        }
+        // For both logged-in and logged-out users, reset the local state
         setMessages([initialMessage]);
         setShowSuggestions(true);
     };
@@ -218,6 +273,7 @@ function ChatInterface({ theme, toggleTheme, user }) {
 
 function SuggestionChips({ onChipClick, user }) {
     const suggestions = [
+        "Tell me about Mangalore",
         "Upcoming Events",
         "Plan a food tour for me",
     ];
@@ -496,14 +552,13 @@ async function fetchWeather(lat, lon) {
 }
 
 async function getBotResponse(userInput, user) {
-    // *** IMPROVED AI PROMPT ***
     const prompt = `
         You are "Mangaluru Mitra", a friendly and expert guide to Mangaluru city.
         Your goal is to understand what the user is asking and classify their request into one of the following categories.
         You MUST respond in JSON format only.
 
         Categories:
-        1. "GET_CITY_INFO": User is asking a general question about Mangaluru.
+        1. "GET_CITY_INFO": User is asking a general question about Mangaluru itself (e.g., "tell me about mangalore", "what is mangalore").
         2. "GET_PLACE_INFO": User is asking for information about a specific local place, including the weather.
         3. "GET_FOOD_INFO": User is asking for information about a specific local food.
         4. "GET_EVENTS": User is asking about events, festivals, or things happening in the city.
