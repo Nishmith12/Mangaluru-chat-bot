@@ -475,24 +475,36 @@ async function fetchWeather(lat, lon) {
 }
 
 async function getBotResponse(userInput, user) {
+    // *** IMPROVED AI PROMPT ***
     const prompt = `
         You are "Mangaluru Mitra", a friendly and expert guide to Mangaluru city.
         Your goal is to understand what the user is asking and classify their request into one of the following categories.
-        You must respond in JSON format only.
+        You MUST respond in JSON format only.
 
         Categories:
-        1.  "GET_FOOD_INFO": User is asking for information about a specific local food.
-        2.  "GET_PLACE_INFO": User is asking for information about a specific local place.
-        3.  "GET_TULU_PHRASES": User is asking for Tulu language phrases.
-        4.  "CREATE_FOOD_TOUR": User wants a one-day food tour, an itinerary, or a plan.
-        5.  "GET_EVENTS": User is asking about events, festivals, or things happening in the city.
-        6.  "GET_FAVORITES": User is asking to see their saved or favorite items.
-        7.  "CHITCHAT": The user is making small talk (e.g., "hello", "how are you?", "what's your name?", "hi").
-        8.  "UNKNOWN_QUERY": The user is asking about a specific Mangalorean topic that you don't have data for.
+        1. "GET_PLACE_INFO": User is asking for information about a specific local place, including the weather.
+        2. "GET_FOOD_INFO": User is asking for information about a specific local food.
+        3. "GET_EVENTS": User is asking about events, festivals, or things happening in the city.
+        4. "CREATE_FOOD_TOUR": User wants a one-day food tour, an itinerary, or a plan.
+        5. "GET_FAVORITES": User is asking to see their saved or favorite items.
+        6. "GET_TULU_PHRASES": User is asking for Tulu language phrases.
+        7. "CHITCHAT": The user is making small talk (e.g., "hello", "how are you?", "what's your name?", "hi", "thanks").
+        8. "UNKNOWN_QUERY": The user is asking about a specific Mangalorean topic that you don't have data for.
 
         User's question: "${userInput}"
 
         Analyze the user's question and provide the JSON response.
+
+        Example Responses:
+        - User: "Tell me about Panambur Beach" -> {"category": "GET_PLACE_INFO", "entity": "Panambur Beach"}
+        - User: "what is the weather like at Panambur Beach" -> {"category": "GET_PLACE_INFO", "entity": "Panambur Beach"}
+        - User: "Tell me about Ideal Ice Cream" -> {"category": "GET_FOOD_INFO", "entity": "Ideal Ice Cream"}
+        - User: "what's happening this weekend" -> {"category": "GET_EVENTS", "entity": "all"}
+        - User: "Plan a food tour for me" -> {"category": "CREATE_FOOD_TOUR", "entity": "all"}
+        - User: "Show my favorites" -> {"category": "GET_FAVORITES", "entity": "all"}
+        - User: "Teach me some Tulu" -> {"category": "GET_TULU_PHRASES", "entity": "all"}
+        - User: "hi" -> {"category": "CHITCHAT", "entity": "greeting"}
+        - User: "Tell me about Tannirbhavi Beach" -> {"category": "UNKNOWN_QUERY", "entity": "Tannirbhavi Beach"}
     `;
 
     const geminiPayload = { contents: [{ parts: [{ text: prompt }] }] };
