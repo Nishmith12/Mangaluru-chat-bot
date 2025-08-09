@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, doc, setDoc, getDocs, query, where, addDoc } from 'firebase/firestore';
+import { getFirestore, collection, doc, setDoc, getDocs, query, where, addDoc, deleteDoc } from 'firebase/firestore';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 import './App.css';
 
@@ -278,6 +278,13 @@ function ChatMessage({ message, user }) {
     const isBot = message.from === 'bot';
     const [copiedPhrase, setCopiedPhrase] = useState(null);
     const [isFavorited, setIsFavorited] = useState(false);
+    const [displayedFavorites, setDisplayedFavorites] = useState(message.favorites || []);
+
+    useEffect(() => {
+        if (message.type === 'favorite_list') {
+            setDisplayedFavorites(message.favorites);
+        }
+    }, [message.favorites, message.type]);
 
     const handleCopy = (text, id) => {
         const textArea = document.createElement("textarea");
@@ -300,12 +307,23 @@ function ChatMessage({ message, user }) {
             const favoritesCol = collection(db, `users/${user.uid}/favorites`);
             await addDoc(favoritesCol, {
                 name: item.title,
-                type: item.weather ? 'place' : 'food', // Simple check to differentiate
+                type: item.weather ? 'place' : 'food',
                 ...item
             });
             setIsFavorited(true);
         } catch (error) {
             console.error("Error adding favorite: ", error);
+        }
+    };
+
+    const handleDeleteFavorite = async (favId) => {
+        if (!user || !favId) return;
+        try {
+            const favDoc = doc(db, `users/${user.uid}/favorites`, favId);
+            await deleteDoc(favDoc);
+            setDisplayedFavorites(prev => prev.filter(fav => fav.id !== favId));
+        } catch (error) {
+            console.error("Error deleting favorite: ", error);
         }
     };
 
@@ -393,14 +411,17 @@ function ChatMessage({ message, user }) {
                  return (
                     <div className="favorite-list-card">
                         <h3>{message.title}</h3>
-                        {message.favorites.length === 0 ? (
+                        {displayedFavorites.length === 0 ? (
                             <p>You haven't saved any favorites yet!</p>
                         ) : (
                             <div className="favorite-items-container">
-                                {message.favorites.map(fav => (
+                                {displayedFavorites.map(fav => (
                                     <div key={fav.id} className="favorite-item">
-                                        <h4>{fav.name}</h4>
-                                        <p>{fav.content}</p>
+                                        <div>
+                                            <h4>{fav.name}</h4>
+                                            <p>{fav.content}</p>
+                                        </div>
+                                        <button onClick={() => handleDeleteFavorite(fav.id)} className="remove-button">Remove</button>
                                     </div>
                                 ))}
                             </div>
@@ -482,21 +503,23 @@ async function getBotResponse(userInput, user) {
         You MUST respond in JSON format only.
 
         Categories:
-        1. "GET_PLACE_INFO": User is asking for information about a specific local place, including the weather.
-        2. "GET_FOOD_INFO": User is asking for information about a specific local food.
-        3. "GET_EVENTS": User is asking about events, festivals, or things happening in the city.
-        4. "CREATE_FOOD_TOUR": User wants a one-day food tour, an itinerary, or a plan.
-        5. "GET_FAVORITES": User is asking to see their saved or favorite items.
-        6. "GET_TULU_PHRASES": User is asking for Tulu language phrases.
-        7. "CHITCHAT": The user is making small talk (e.g., "hello", "how are you?", "what's your name?", "hi", "thanks").
-        8. "UNKNOWN_QUERY": The user is asking about a specific Mangalorean topic that you don't have data for.
+        1. "GET_CITY_INFO": User is asking a general question about Mangaluru.
+        2. "GET_PLACE_INFO": User is asking for information about a specific local place, including the weather.
+        3. "GET_FOOD_INFO": User is asking for information about a specific local food.
+        4. "GET_EVENTS": User is asking about events, festivals, or things happening in the city.
+        5. "CREATE_FOOD_TOUR": User wants a one-day food tour, an itinerary, or a plan.
+        6. "GET_FAVORITES": User is asking to see their saved or favorite items.
+        7. "GET_TULU_PHRASES": User is asking for Tulu language phrases.
+        8. "CHITCHAT": The user is making small talk (e.g., "hello", "how are you?", "what's your name?", "hi", "thanks").
+        9. "UNKNOWN_QUERY": The user is asking about a specific Mangalorean topic that you don't have data for.
 
         User's question: "${userInput}"
 
         Analyze the user's question and provide the JSON response.
 
         Example Responses:
-        - User: "Tell me about Panambur Beach" -> {"category": "GET_PLACE_INFO", "entity": "Panambur Beach"}
+        - User: "tell me about mangalore" -> {"category": "GET_CITY_INFO", "entity": "Mangaluru"}
+        - User: "What's Panambur beach like?" -> {"category": "GET_PLACE_INFO", "entity": "Panambur Beach"}
         - User: "what is the weather like at Panambur Beach" -> {"category": "GET_PLACE_INFO", "entity": "Panambur Beach"}
         - User: "Tell me about Ideal Ice Cream" -> {"category": "GET_FOOD_INFO", "entity": "Ideal Ice Cream"}
         - User: "what's happening this weekend" -> {"category": "GET_EVENTS", "entity": "all"}
@@ -534,6 +557,13 @@ async function getBotResponse(userInput, user) {
     const intent = JSON.parse(jsonText);
 
     switch (intent.category) {
+        case 'GET_CITY_INFO':
+            return {
+                from: 'bot',
+                type: 'text',
+                content: "Mangaluru (also known as Mangalore) is a major port city in the Indian state of Karnataka. It's known for its beautiful beaches, historic temples, unique Udupi-style cuisine, and the vibrant culture of the Tulu-speaking people. It's a hub of education, industry, and healthcare in the region."
+            };
+
         case 'GET_FOOD_INFO':
         case 'GET_PLACE_INFO':
             const collectionName = intent.category === 'GET_FOOD_INFO' ? 'food' : 'places';

@@ -559,7 +559,7 @@ input:checked + .slider:before {
     border: 2px solid white;
 }
 
-/* *** NEW FAVORITES STYLES *** */
+/* Favorites Styles */
 .card-actions {
     padding: 0.5rem 1rem;
     border-top: 1px solid var(--border-color);
@@ -603,6 +603,9 @@ input:checked + .slider:before {
     gap: 0.75rem;
 }
 .favorite-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     background-color: var(--card-secondary-bg);
     border-radius: 0.5rem;
     padding: 0.75rem;
@@ -617,6 +620,20 @@ input:checked + .slider:before {
     font-size: 0.875rem;
     color: var(--text-secondary);
     margin: 0;
+}
+/* *** NEW REMOVE BUTTON STYLE *** */
+.remove-button {
+    background-color: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 0.375rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.remove-button:hover {
+    background-color: #dc2626;
 }
 
 
