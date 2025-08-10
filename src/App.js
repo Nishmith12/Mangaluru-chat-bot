@@ -30,15 +30,15 @@ const setupInitialData = async () => {
     console.log("Setting up initial data in Firestore...");
     const data = {
         places: [
-            { id: "panambur_beach", name: "Panambur Beach", category: "Beach", description: "One of Mangaluru's most popular beaches, known for its clean shores, beautiful sunsets, and various events.", best_time_to_visit: "Evenings (4 PM - 7 PM) are ideal. The best months are from September to February.", events: "Hosts the International Kite Festival (January) and other beach festivals.", lat: 12.9723, lng: 74.8055 },
-            { id: "kadri_temple", name: "Kadri Manjunatha Temple", category: "Temple", description: "An ancient temple dedicated to Lord Shiva, known for its bronze statues and the ponds at the rear.", best_time_to_visit: "Early mornings or during evening prayers for a serene experience." },
-            { id: "st_aloysius_chapel", name: "St. Aloysius Chapel", category: "Historical Site", description: "Famous for its magnificent interior paintings that cover nearly all of the walls and ceilings, created by the Italian Jesuit Antonio Moscheni in 1900. It is often compared to the Sistine Chapel in Rome.", best_time_to_visit: "Open on weekdays from 9:30 AM to 1:00 PM and 2:00 PM to 4:30 PM. The art is best viewed in daylight." }
+            { id: "panambur_beach", name: "Panambur Beach", category: "Beach", facts: ["One of Mangaluru's most popular beaches", "Known for clean shores and beautiful sunsets", "Hosts an International Kite Festival in January"], lat: 12.9723, lng: 74.8055 },
+            { id: "kadri_temple", name: "Kadri Manjunatha Temple", category: "Temple", facts: ["An ancient temple dedicated to Lord Shiva (Manjunatha)", "Features notable bronze statues", "Has several ponds at the rear of the temple complex"] },
+            { id: "st_aloysius_chapel", name: "St. Aloysius Chapel", category: "Historical Site", facts: ["Famous for magnificent interior paintings covering walls and ceilings", "The paintings were created by the Italian Jesuit Antonio Moscheni in 1900", "Often compared to the Sistine Chapel in Rome"] }
         ],
         food: [
-            { id: "ghee_roast", name: "Chicken Ghee Roast", type: "Lunch/Dinner", description: "A fiery, tangy, and rich chicken dish cooked with roasted spices and a generous amount of clarified butter ( ghee).", origin_story: "The iconic dish was invented at Shetty Lunch Home in Kundapura. It is a hallmark of Bunt cuisine.", restaurant_name: "Maharaja Restaurant", lat: 12.8739, lng: 74.8425 },
-            { id: "neer_dosa", name: "Neer Dosa", type: "Breakfast", description: "A thin, soft, and delicate rice crepe. The name literally translates to 'water dosa' in Tulu. It is typically served with chutney or chicken/fish curry.", origin_story: "A staple breakfast item from the Tulu Nadu region, cherished for its simplicity and taste.", restaurant_name: "Hotel Ayodhya", lat: 12.8705, lng: 74.8398 },
-            { id: "golibaje", name: "Golibaje (Mangalore Buns)", type: "Snack", description: "A popular tea-time snack in Mangaluru, these are soft, fluffy, slightly sweet and savory fritters made from a fermented all-purpose flour batter.", origin_story: "A classic snack found in Udupi-Mangaluru region restaurants, perfect with a cup of filter coffee.", restaurant_name: "Taj Mahal Cafe", lat: 12.8679, lng: 74.8416 },
-            { id: "ideal_ice_cream", name: "Ideal Ice Cream", type: "Dessert", description: "A legendary ice cream brand from Mangaluru, famous for its unique flavors like 'Gadbad' and 'Pabba's Special'.", origin_story: "Started by Mr. Prabhakar Kamath in 1975, Ideal's has become an iconic part of Mangalorean culture and a must-visit for anyone in the city.", restaurant_name: "Pabba's Ideal Cafe", lat: 12.8829, lng: 74.8415 }
+            { id: "ghee_roast", name: "Chicken Ghee Roast", type: "Lunch/Dinner", facts: ["A fiery, tangy, and rich chicken dish", "Cooked with roasted spices and a generous amount of ghee", "Invented at Shetty Lunch Home in Kundapura", "A hallmark of Bunt cuisine"], restaurant_name: "Maharaja Restaurant", lat: 12.8739, lng: 74.8425 },
+            { id: "neer_dosa", name: "Neer Dosa", type: "Breakfast", facts: ["A thin, soft, and delicate rice crepe", "Name translates to 'water dosa' in Tulu", "Typically served with chutney or chicken/fish curry", "A staple breakfast item from the Tulu Nadu region"], restaurant_name: "Hotel Ayodhya", lat: 12.8705, lng: 74.8398 },
+            { id: "golibaje", name: "Golibaje (Mangalore Buns)", type: "Snack", facts: ["A popular tea-time snack", "Soft, fluffy, slightly sweet and savory fritters", "Made from a fermented all-purpose flour batter", "Perfect with a cup of filter coffee"], restaurant_name: "Taj Mahal Cafe", lat: 12.8679, lng: 74.8416 },
+            { id: "ideal_ice_cream", name: "Ideal Ice Cream", type: "Dessert", facts: ["A legendary ice cream brand from Mangaluru", "Famous for its unique flavors like 'Gadbad'", "Started by Mr. Prabhakar Kamath in 1975", "An iconic part of Mangalorean culture"], restaurant_name: "Pabba's Ideal Cafe", lat: 12.8829, lng: 74.8415 }
         ],
         tulu: [
             { id: "how_are_you", english: "How are you?", tulu: "Encha Ullar?", pronunciation: "En-chha Ool-lar" },
@@ -84,9 +84,18 @@ function App() {
 
     useEffect(() => {
         const checkAndSetupData = async () => {
-            const placesCollection = collection(db, "places");
-            const snapshot = await getDocs(placesCollection);
-            if (snapshot.empty) {
+            const collectionsToCheck = ['places', 'food', 'tulu', 'events'];
+            let shouldSetup = false;
+            for (const colName of collectionsToCheck) {
+                const collectionRef = collection(db, colName);
+                const snapshot = await getDocs(collectionRef);
+                if (snapshot.empty) {
+                    shouldSetup = true;
+                    break;
+                }
+            }
+
+            if (shouldSetup) {
                 await setupInitialData();
             } else {
                 console.log("Data already exists. Skipping setup.");
@@ -137,7 +146,6 @@ function ChatInterface({ theme, toggleTheme, user }) {
         chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
 
-    // *** NEW EFFECT FOR REAL-TIME CHAT HISTORY ***
     useEffect(() => {
         if (user) {
             const messagesCol = collection(db, `users/${user.uid}/messages`);
@@ -152,15 +160,13 @@ function ChatInterface({ theme, toggleTheme, user }) {
                 if (history.length > 0) {
                     setMessages(history);
                 } else {
-                    // If history is empty for a new user, add the initial message to their history
                     const welcomeMessage = { ...initialMessage, timestamp: serverTimestamp() };
                     addDoc(messagesCol, welcomeMessage);
                 }
             });
 
-            return () => unsubscribe(); // Cleanup listener on logout or unmount
+            return () => unsubscribe();
         } else {
-            // Reset for logged-out users
             setMessages([initialMessage]);
         }
     }, [user]);
@@ -169,16 +175,14 @@ function ChatInterface({ theme, toggleTheme, user }) {
         if (!messageText.trim() || isLoading) return;
         
         setShowSuggestions(false);
-        setInput(''); // Clear input immediately
+        setInput('');
 
         const userMessage = { from: 'user', type: 'text', content: messageText, timestamp: serverTimestamp() };
         
-        // If user is logged in, save their message to Firestore
         if (user) {
             const messagesCol = collection(db, `users/${user.uid}/messages`);
             await addDoc(messagesCol, userMessage);
         } else {
-            // If not logged in, just update local state (won't be saved)
             setMessages(prev => [...prev, { ...userMessage, timestamp: new Date(), id: Date.now() }]);
         }
 
@@ -221,12 +225,10 @@ function ChatInterface({ theme, toggleTheme, user }) {
 
     const handleClearChat = async () => {
         if (user) {
-            // For logged-in users, clear their history in Firestore
             const messagesCol = collection(db, `users/${user.uid}/messages`);
             const snapshot = await getDocs(messagesCol);
             snapshot.forEach(doc => deleteDoc(doc.ref));
         }
-        // For both logged-in and logged-out users, reset the local state
         setMessages([initialMessage]);
         setShowSuggestions(true);
     };
@@ -263,7 +265,7 @@ function ChatInterface({ theme, toggleTheme, user }) {
                         disabled={isLoading}
                     />
                     <button onClick={() => handleSend(input)} disabled={isLoading}>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                     </button>
                 </div>
             </div>
@@ -391,7 +393,6 @@ function ChatMessage({ message, user }) {
                         <div className="info-card-content">
                             <h3>{message.title}</h3>
                             <p>{message.content}</p>
-                            {message.origin_story && <p className="origin-story">"{message.origin_story}"</p>}
                         </div>
                         {message.weather && <WeatherInfo weather={message.weather} />}
                         {user && (
@@ -551,38 +552,61 @@ async function fetchWeather(lat, lon) {
     }
 }
 
+async function generateDescription(name, facts) {
+    const generationPrompt = `
+        You are a friendly and engaging tour guide. 
+        Based on the following facts, write a short, conversational paragraph about "${name}".
+        Do not just list the facts. Weave them into a nice, readable description.
+
+        Facts:
+        - ${facts.join("\n- ")}
+    `;
+    const payload = { contents: [{ parts: [{ text: generationPrompt }] }] };
+    const response = await fetch(GEMINI_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+    if (!response.ok) return "I'm having a little trouble thinking of what to say right now!";
+    const result = await response.json();
+    return result.candidates[0].content.parts[0].text;
+}
+
+
 async function getBotResponse(userInput, user) {
+    // *** IMPROVED AI PROMPT WITH DETAILED EXAMPLES ***
     const prompt = `
         You are "Mangaluru Mitra", a friendly and expert guide to Mangaluru city.
         Your goal is to understand what the user is asking and classify their request into one of the following categories.
         You MUST respond in JSON format only.
 
         Categories:
-        1. "GET_CITY_INFO": User is asking a general question about Mangaluru itself (e.g., "tell me about mangalore", "what is mangalore").
+        1. "GET_CITY_INFO": User is asking a general question about Mangaluru itself.
         2. "GET_PLACE_INFO": User is asking for information about a specific local place, including the weather.
         3. "GET_FOOD_INFO": User is asking for information about a specific local food.
         4. "GET_EVENTS": User is asking about events, festivals, or things happening in the city.
         5. "CREATE_FOOD_TOUR": User wants a one-day food tour, an itinerary, or a plan.
         6. "GET_FAVORITES": User is asking to see their saved or favorite items.
         7. "GET_TULU_PHRASES": User is asking for Tulu language phrases.
-        8. "CHITCHAT": The user is making small talk (e.g., "hello", "how are you?", "what's your name?", "hi", "thanks").
+        8. "CHITCHAT": The user is making small talk.
         9. "UNKNOWN_QUERY": The user is asking about a specific Mangalorean topic that you don't have data for.
 
         User's question: "${userInput}"
 
-        Analyze the user's question and provide the JSON response.
-
-        Example Responses:
-        - User: "tell me about mangalore" -> {"category": "GET_CITY_INFO", "entity": "Mangaluru"}
-        - User: "What's Panambur beach like?" -> {"category": "GET_PLACE_INFO", "entity": "Panambur Beach"}
-        - User: "what is the weather like at Panambur Beach" -> {"category": "GET_PLACE_INFO", "entity": "Panambur Beach"}
-        - User: "Tell me about Ideal Ice Cream" -> {"category": "GET_FOOD_INFO", "entity": "Ideal Ice Cream"}
-        - User: "what's happening this weekend" -> {"category": "GET_EVENTS", "entity": "all"}
-        - User: "Plan a food tour for me" -> {"category": "CREATE_FOOD_TOUR", "entity": "all"}
-        - User: "Show my favorites" -> {"category": "GET_FAVORITES", "entity": "all"}
-        - User: "Teach me some Tulu" -> {"category": "GET_TULU_PHRASES", "entity": "all"}
-        - User: "hi" -> {"category": "CHITCHAT", "entity": "greeting"}
-        - User: "Tell me about Tannirbhavi Beach" -> {"category": "UNKNOWN_QUERY", "entity": "Tannirbhavi Beach"}
+        --- EXAMPLES ---
+        User: "tell me about mangalore" -> {"category": "GET_CITY_INFO", "entity": "Mangaluru"}
+        User: "What's Panambur beach like?" -> {"category": "GET_PLACE_INFO", "entity": "Panambur Beach"}
+        User: "what is the weather like at Panambur Beach" -> {"category": "GET_PLACE_INFO", "entity": "Panambur Beach"}
+        User: "Tell me about Ideal Ice Cream" -> {"category": "GET_FOOD_INFO", "entity": "Ideal Ice Cream"}
+        User: "what's happening this weekend" -> {"category": "GET_EVENTS", "entity": "all"}
+        User: "Upcoming Events" -> {"category": "GET_EVENTS", "entity": "all"}
+        User: "Plan a food tour for me" -> {"category": "CREATE_FOOD_TOUR", "entity": "all"}
+        User: "Show my favorites" -> {"category": "GET_FAVORITES", "entity": "all"}
+        User: "Teach me some Tulu" -> {"category": "GET_TULU_PHRASES", "entity": "all"}
+        User: "hi" -> {"category": "CHITCHAT", "entity": "greeting"}
+        User: "thanks" -> {"category": "CHITCHAT", "entity": "thanks"}
+        User: "Tell me about Tannirbhavi Beach" -> {"category": "UNKNOWN_QUERY", "entity": "Tannirbhavi Beach"}
+        --- END EXAMPLES ---
     `;
 
     const geminiPayload = { contents: [{ parts: [{ text: prompt }] }] };
@@ -627,6 +651,8 @@ async function getBotResponse(userInput, user) {
             if (!querySnapshot.empty) {
                 const docData = querySnapshot.docs[0].data();
                 
+                const generatedContent = await generateDescription(docData.name, docData.facts);
+
                 let weatherData = null;
                 if (intent.category === 'GET_PLACE_INFO' && docData.lat && docData.lng) {
                     weatherData = await fetchWeather(docData.lat, docData.lng);
@@ -636,8 +662,7 @@ async function getBotResponse(userInput, user) {
                     from: 'bot',
                     type: 'card',
                     title: docData.name,
-                    content: docData.description,
-                    origin_story: docData.origin_story || docData.best_time_to_visit,
+                    content: generatedContent, // Use the generated content
                     weather: weatherData
                 };
             } else {
