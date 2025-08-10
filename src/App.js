@@ -572,6 +572,25 @@ async function generateDescription(name, facts) {
     return result.candidates[0].content.parts[0].text;
 }
 
+async function generateGeneralResponse(topic) {
+    const generationPrompt = `
+        You are a helpful and concise tour guide for the city of Mangaluru, India.
+        A user has asked about a topic you don't have specific data for. 
+        Please provide a brief, helpful, one-paragraph summary about "${topic}" in the context of Mangaluru.
+    `;
+    const payload = { contents: [{ parts: [{ text: generationPrompt }] }] };
+    const response = await fetch(GEMINI_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+    if (!response.ok) {
+        return `I'm sorry, I couldn't find any information about ${topic} at the moment.`;
+    }
+    const result = await response.json();
+    return result.candidates[0].content.parts[0].text;
+}
+
 
 async function getBotResponse(userInput, user) {
     // *** IMPROVED AI PROMPT WITH DETAILED EXAMPLES ***
@@ -662,11 +681,13 @@ async function getBotResponse(userInput, user) {
                     from: 'bot',
                     type: 'card',
                     title: docData.name,
-                    content: generatedContent, // Use the generated content
+                    content: generatedContent,
                     weather: weatherData
                 };
             } else {
-                return { from: 'bot', type: 'text', content: `I'm sorry, I don't have specific information about "${intent.entity}" in my database right now. I'm always learning though!` };
+                 // If not in the database, fall through to the general knowledge query
+                const generalResponse = await generateGeneralResponse(intent.entity);
+                return { from: 'bot', type: 'text', content: generalResponse };
             }
 
         case 'GET_TULU_PHRASES':
@@ -730,11 +751,8 @@ async function getBotResponse(userInput, user) {
             };
 
         case 'UNKNOWN_QUERY':
-            return {
-                from: 'bot',
-                type: 'text',
-                content: `That's a great question about ${intent.entity}! I don't have specific details in my database about that yet, but I'm always learning. You could try asking me about Panambur Beach or Ideal Ice Cream!`
-            };
+            const generalResponse = await generateGeneralResponse(intent.entity);
+            return { from: 'bot', type: 'text', content: generalResponse };
 
         case 'CHITCHAT':
         default:
